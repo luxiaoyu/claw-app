@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moonshot.kimiclaw.theme.lightBrandNormal
 import com.moonshot.kimiclaw.theme.lightBubbleSurface
 import com.moonshot.kimiclaw.theme.lightMainSurface
@@ -48,20 +49,24 @@ import com.moonshot.kimiclaw.theme.lightSurface06
 import com.moonshot.kimiclaw.theme.lightTextCaption
 import com.moonshot.kimiclaw.theme.lightTextPrimary
 import com.moonshot.kimiclaw.theme.lightTextSecondary
+import com.moonshot.kimiclaw.viewmodel.WelcomeViewModel
 
 /**
- * @desc   :
+ * @desc   : Welcome页面，显示权限申请卡片
  * @author : luxiaoyu@moonshot.cn
  * @date   : 2026/2/11 22:24
  */
 
 @Composable
 fun WelcomeScreen(
+    viewModel: WelcomeViewModel,
     onNext: () -> Unit,
     onCheckUpgrade: () -> Unit
 ) {
-    // Permission states
-    var notificationEnabled by remember { mutableStateOf(false) }
+    // 从 ViewModel 收集通知权限状态
+    val notificationEnabled by viewModel.notificationEnabled.collectAsStateWithLifecycle()
+    
+    // 其他权限状态（后续可以移到 ViewModel）
     var backgroundEnabled by remember { mutableStateOf(false) }
     var batteryEnabled by remember { mutableStateOf(false) }
 
@@ -114,7 +119,7 @@ fun WelcomeScreen(
                 title = "Notifications",
                 description = "Show gateway status and alerts",
                 isEnabled = notificationEnabled,
-                onToggle = { notificationEnabled = !notificationEnabled }
+                onToggle = { viewModel.onNotificationPermissionClick() }
             )
 
             Spacer(modifier = Modifier.height(16.dp))

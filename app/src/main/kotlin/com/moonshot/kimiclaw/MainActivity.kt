@@ -5,31 +5,19 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryFull
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,30 +29,49 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import com.moonshot.kimiclaw.theme.lightBrandNormal
-import com.moonshot.kimiclaw.theme.lightBubbleSurface
 import com.moonshot.kimiclaw.theme.lightMainSurface
-import com.moonshot.kimiclaw.theme.lightSuccess
-import com.moonshot.kimiclaw.theme.lightSurface06
-import com.moonshot.kimiclaw.theme.lightTextCaption
 import com.moonshot.kimiclaw.theme.lightTextPrimary
 import com.moonshot.kimiclaw.theme.lightTextSecondary
-import com.moonshot.kimiclaw.theme.lightSurface02
 import com.moonshot.kimiclaw.ui.WelcomeScreen
+import com.moonshot.kimiclaw.viewmodel.WelcomeViewModel
 
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: WelcomeViewModel by viewModels()
+
+    // 用于启动通知设置页面并接收返回结果
+    private val notificationSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        // 从通知设置页面返回，检查权限状态
+        viewModel.onReturnFromNotificationSettings()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // Set status bar icons to dark (for light background)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = true
-        
+
+        // 收集 ViewModel 事件
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.openNotificationSettingsEvent.collect { intent ->
+                    notificationSettingsLauncher.launch(intent)
+                }
+            }
+        }
+
         setContent {
             MaterialTheme {
                 Surface(
@@ -75,6 +82,7 @@ class MainActivity : ComponentActivity() {
 
                     if (showWelcomeScreen) {
                         WelcomeScreen(
+                            viewModel = viewModel,
                             onNext = {
                                 // Start TermuxActivity
                                 val intent = Intent(this, TermuxActivity::class.java)
@@ -95,6 +103,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 每次返回页面时检查通知权限状态
+        viewModel.checkNotificationPermission()
     }
 }
 
