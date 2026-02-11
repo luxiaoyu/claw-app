@@ -57,6 +57,14 @@ class MainActivity : ComponentActivity() {
         viewModel.onReturnFromNotificationSettings()
     }
 
+    // 用于启动电池优化设置页面并接收返回结果
+    private val batteryOptimizationLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        // 从电池优化设置页面返回，检查权限状态
+        viewModel.onReturnFromBatteryOptimizationSettings()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -66,8 +74,15 @@ class MainActivity : ComponentActivity() {
         // 收集 ViewModel 事件
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.openNotificationSettingsEvent.collect { intent ->
-                    notificationSettingsLauncher.launch(intent)
+                launch {
+                    viewModel.openNotificationSettingsEvent.collect { intent ->
+                        notificationSettingsLauncher.launch(intent)
+                    }
+                }
+                launch {
+                    viewModel.openBatteryOptimizationEvent.collect { intent ->
+                        batteryOptimizationLauncher.launch(intent)
+                    }
                 }
             }
         }
@@ -107,8 +122,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 每次返回页面时检查通知权限状态
+        // 每次返回页面时检查权限状态
         viewModel.checkNotificationPermission()
+        viewModel.checkBatteryOptimizationStatus()
     }
 }
 

@@ -63,11 +63,11 @@ fun WelcomeScreen(
     onNext: () -> Unit,
     onCheckUpgrade: () -> Unit
 ) {
-    // 从 ViewModel 收集通知权限状态
+    // 从 ViewModel 收集权限状态
     val notificationEnabled by viewModel.notificationEnabled.collectAsStateWithLifecycle()
+    val backgroundEnabled by viewModel.batteryOptimizationEnabled.collectAsStateWithLifecycle()
     
     // 其他权限状态（后续可以移到 ViewModel）
-    var backgroundEnabled by remember { mutableStateOf(false) }
     var batteryEnabled by remember { mutableStateOf(false) }
 
     Box(
@@ -129,18 +129,19 @@ fun WelcomeScreen(
                 title = "Background Running",
                 description = "Keep gateway alive when app is in background",
                 isEnabled = backgroundEnabled,
-                onToggle = { backgroundEnabled = !backgroundEnabled }
+                onToggle = { viewModel.onBatteryOptimizationClick() }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            PermissionCard(
-                icon = Icons.Default.BatteryFull,
-                title = "Battery Optimization",
-                description = "Set battery to unrestricted & allow background data",
-                isEnabled = batteryEnabled,
-                onToggle = { batteryEnabled = !batteryEnabled }
-            )
+            // todo lxy
+//            PermissionCard(
+//                icon = Icons.Default.BatteryFull,
+//                title = "Battery Optimization",
+//                description = "Set battery to unrestricted & allow background data",
+//                isEnabled = batteryEnabled,
+//                onToggle = { batteryEnabled = !batteryEnabled }
+//            )
 
             Spacer(modifier = Modifier.weight(1f))
 
