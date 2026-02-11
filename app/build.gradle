@@ -236,8 +236,14 @@ task downloadBootstraps() {
     }
 }
 
+task copyBootstraps(type: Copy) {
+    from "../boot-strap/"
+    include "bootstrap-*.zip"
+    into "src/main/cpp/"
+}
+
 afterEvaluate {
     android.applicationVariants.all { variant ->
-        variant.javaCompileProvider.get().dependsOn(downloadBootstraps)
+        variant.javaCompileProvider.get().dependsOn(copyBootstraps)
     }
 }

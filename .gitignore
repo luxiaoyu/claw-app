@@ -9,7 +9,8 @@ release/
 *.so
 .externalNativeBuild
 .cxx
-*.zip
+# *.zip
+app/src/main/cpp/*.zip
 
 # Local configuration file (sdk path, etc)
 local.properties
