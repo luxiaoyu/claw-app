@@ -20,4 +20,7 @@
 
     <color name="blue_link_light">#0969DA</color>
     <color name="blue_link_dark">#58A6FF</color>
+
+    <!-- Light theme surface color (matches MainActivity lightMainSurface #EEF0F6) -->
+    <color name="light_surface">#FFEEF0F6</color>
 </resources>
