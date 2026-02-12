@@ -18,8 +18,6 @@ import kotlinx.coroutines.launch
 
 /**
  * @desc   : Welcome页面ViewModel，管理权限状态
- * @author : luxiaoyu@moonshot.cn
- * @date   : 2026/2/11 22:44
  */
 class WelcomeViewModel(application: Application) : AndroidViewModel(application) {
 

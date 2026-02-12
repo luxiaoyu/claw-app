@@ -2,60 +2,70 @@
 
 ## Project Overview
 
-Termux is an Android terminal emulator and Linux environment application. This repository contains the core Termux app (user interface and terminal emulation), while the packages installable inside the app are maintained in [termux/termux-packages](https://github.com/termux/termux-packages).
+This is an Android terminal emulator and Linux environment application based on Termux. The project extends Termux with a modern Jetpack Compose-based UI layer (KimiClaw) while maintaining compatibility with the core Termux terminal emulation and package management capabilities.
 
 - **Package Name**: `com.termux`
 - **Current Version**: 0.118.0 (versionCode 118)
 - **License**: GPLv3 only (with exceptions for libraries)
+- **Primary Languages**: Java and Kotlin (with Chinese comments in KimiClaw layer)
+- **Build System**: Gradle with Android Gradle Plugin 8.9.1
 
 ## Technology Stack
 
 ### Primary Technologies
-- **Language**: Java (Android)
-- **Build System**: Gradle with Android Gradle Plugin 8.13.2
+- **Languages**: Java, Kotlin 2.0.21
+- **Build System**: Gradle 8.x with Android Gradle Plugin 8.9.1
 - **SDK Versions**:
   - `compileSdkVersion`: 36
   - `targetSdkVersion`: 28
-  - `minSdkVersion`: 21 (Android 5.0+)
+  - `minSdkVersion`: 26 (Android 8.0+)
   - `ndkVersion`: 29.0.14206865
 
 ### Native Development
 - **NDK Build**: Uses `Android.mk` for native builds
-- **Native Libraries**: `libtermux.so` (built from C source)
-- **Bootstrap**: Pre-built bootstrap zips containing minimal Linux environment
+- **Native Libraries**: 
+  - `libtermux.so` - Terminal emulator JNI (terminal-emulator/src/main/jni/)
+  - `libtermux-bootstrap.so` - Bootstrap loader (app/src/main/cpp/)
+- **Bootstrap**: Pre-built bootstrap zips containing minimal Linux environment downloaded from termux-packages releases
 
 ### Key Dependencies
-- AndroidX libraries (core, annotation, drawerlayout, preference, viewpager)
-- Material Design Components
-- Google Guava
-- Markwon (Markdown rendering)
-- Commons IO 2.5 (capped for Android < 8 compatibility)
-- Hidden API Bypass (for internal Android APIs)
+- **AndroidX libraries**: core-ktx (1.17.0), annotation, drawerlayout, preference-ktx, viewpager
+- **Material Design Components**: 1.13.0
+- **Jetpack Compose**: BOM 2026.01.01, Material3, Material Icons Extended
+- **Google Guava**: 33.5.0-jre
+- **Markwon**: 4.6.2 (Markdown rendering)
+- **Commons IO**: 2.5 (capped for Android < 8 compatibility)
+- **Hidden API Bypass**: 6.1 (for internal Android APIs)
+- **termux-am-library**: v2.0.0
 
 ## Project Structure
 
-The project follows a multi-module Gradle structure:
+The project follows a multi-module Gradle structure defined in `settings.gradle`:
 
 ```
-├── app/                    # Main Android application
-│   ├── src/main/java/      # Java source code
-│   ├── src/main/cpp/       # Native C code (bootstrap loader)
-│   ├── src/main/res/       # Android resources
-│   └── build.gradle        # App module build config
-├── termux-shared/          # Shared library for app and plugins
-│   ├── src/main/java/      # Shared Java code
-│   └── build.gradle        # Library build config with JitPack publishing
-├── terminal-emulator/      # Terminal emulation library
-│   ├── src/main/java/      # Terminal emulator core
-│   ├── src/main/jni/       # JNI native code (termux.c)
-│   ├── src/test/java/      # Unit tests
-│   └── build.gradle        # Library build config with JitPack publishing
-├── terminal-view/          # Android terminal view widget
-│   ├── src/main/java/      # TerminalView implementation
-│   └── build.gradle        # Library build config with JitPack publishing
-├── docs/                   # Documentation
-├── art/                    # Assets and artwork
-└── .github/workflows/      # CI/CD configurations
+├── app/                          # Main Android application
+│   ├── src/main/java/            # Java source code (Termux core)
+│   ├── src/main/kotlin/          # Kotlin source code (KimiClaw UI layer)
+│   ├── src/main/cpp/             # Native C code (bootstrap loader)
+│   ├── src/main/jni/             # JNI native code
+│   ├── src/main/res/             # Android resources
+│   ├── src/test/java/            # Unit tests
+│   └── build.gradle              # App module build config
+├── termux-shared/                # Shared library for app and plugins
+│   ├── src/main/java/            # Shared Java code
+│   └── build.gradle              # Library build config with JitPack publishing
+├── terminal-emulator/            # Terminal emulation library
+│   ├── src/main/java/            # Terminal emulator core
+│   ├── src/main/jni/             # JNI native code (termux.c)
+│   ├── src/test/java/            # Unit tests
+│   └── build.gradle              # Library build config with JitPack publishing
+├── terminal-view/                # Android terminal view widget
+│   ├── src/main/java/            # TerminalView implementation
+│   └── build.gradle              # Library build config with JitPack publishing
+├── boot-strap/                   # Bootstrap zip files
+├── docs/                         # Documentation
+├── art/                          # Assets and artwork
+└── .github/workflows/            # CI/CD configurations
 ```
 
 ### Module Dependencies
@@ -77,6 +87,16 @@ termux-shared -> terminal-view -> terminal-emulator
 - `app/fragments/settings/` - Preference fragments
 - `app/terminal/` - Terminal UI controllers and clients
 - `filepicker/TermuxDocumentsProvider.java` - Storage access framework provider
+
+#### KimiClaw UI Layer (`app/src/main/kotlin/com/moonshot/kimiclaw/`)
+- `MainActivity.kt` - Entry point with Jetpack Compose UI (Welcome, Dashboard, Install screens)
+- `KimiClawService.kt` - Foreground service for managing shell commands with coroutines
+- `TermuxSetup.kt` - Bootstrap installation helper
+- `ui/` - Compose screens (WelcomeScreen, DashboardScreen, InstallScreen, etc.)
+- `viewmodel/` - ViewModels for UI state management
+- `termux/ShellUtils.kt` - Shell execution utilities with Flow support
+- `openclaw/OpenClawHelper.kt` - OpenClaw gateway management
+- `openclaw/OpenClawInstaller.kt` - OpenClaw installation logic
 
 #### Shared Library (`termux-shared/src/main/java/com/termux/shared/`)
 - `termux/TermuxConstants.java` - Central constants definition
@@ -175,10 +195,10 @@ app/src/test/java/                  # Unit tests for app module
 
 ### Test Framework
 - JUnit 4.13.2
-- Robolectric 4.10 (for Android unit tests)
+- Robolectric 4.16.1 (for Android unit tests)
 
 ### Key Test Files
-- `TerminalTestCase.java` - Base test class
+- `TerminalTestCase.java` - Base test class for terminal emulator
 - `TerminalEmulatorTest.java` - Core emulation tests
 - `KeyHandlerTest.java` - Key handling tests
 - `ByteQueueTest.java` - Data structure tests
@@ -190,7 +210,9 @@ GitHub Actions workflows (`.github/workflows/`):
 ### 1. Build Workflow (`debug_build.yml`)
 - Triggers on push to `master`, PRs, and `github-releases/**` branches
 - Builds both `apt-android-7` and `apt-android-5` variants
-- Produces debug APKs for all architectures
+- Produces debug APKs for all architectures (universal, arm64-v8a, armeabi-v7a, x86_64, x86)
+- Validates semantic versioning
+- Generates SHA256 checksums
 - Uploads artifacts
 
 ### 2. Unit Tests (`run_tests.yml`)
@@ -198,20 +220,28 @@ GitHub Actions workflows (`.github/workflows/`):
 - Executes `./gradlew test`
 
 ### 3. Release Attachment (`attach_debug_apks_to_release.yml`)
-- Triggers on GitHub releases
+- Triggers on GitHub releases (published)
 - Builds and attaches APKs to release
 - Validates semantic versioning
+- Deletes release and tag if build fails
 
 ### 4. Library Publishing (`trigger_library_builds_on_jitpack.yml`)
-- Triggers JitPack builds for library modules
+- Triggers JitPack builds for library modules on release
+- Waits 3 minutes for tag detection
+- Publishes: terminal-emulator, terminal-view, termux-shared
 
-### 5. Dependency Submission (`dependency-submission.yml`)
-- Submits dependency graph to GitHub
-
-### 6. Gradle Wrapper Validation (`gradle-wrapper-validation.yml`)
+### 5. Gradle Wrapper Validation (`gradle-wrapper-validation.yml`)
 - Validates Gradle wrapper checksums
 
 ## Code Style and Conventions
+
+### EditorConfig
+The project uses `.editorconfig` with the following settings:
+- Line endings: LF
+- Charset: UTF-8
+- Indent style: space
+- Indent size: 4 (2 for YAML files)
+- Insert final newline: true
 
 ### Commit Message Format
 
@@ -255,13 +285,16 @@ major.minor.patch(-prerelease)(+buildmetadata)
 
 Examples: `0.118.0`, `0.118.1-beta`, `0.118.0+build.123`
 
+Version validation is enforced in `app/build.gradle` using regex matching.
+
 ### Code Organization
 
 1. **Constants**: Define in `TermuxConstants.java` (termux-shared), never hardcode
 2. **Shared Code**: Use `termux-shared` library for code shared between app and plugins
-3. **Package Structure**: 
+3. **Package Structure**:
    - General utilities: `com.termux.shared.*`
    - Termux-specific: `com.termux.shared.termux.*`
+   - KimiClaw UI: `com.moonshot.kimiclaw.*`
 4. **Logging**: Use `Logger` class from termux-shared
 
 ## Development Guidelines
@@ -269,10 +302,12 @@ Examples: `0.118.0`, `0.118.1-beta`, `0.118.0+build.123`
 ### Adding New Features
 
 1. **Constants**: Add to appropriate constants class in `termux-shared`
-2. **Settings**: 
+2. **Settings**:
    - Add preference keys to `TermuxPreferenceConstants`
    - Create preference fragment in `app/fragments/settings/`
-3. **UI Components**: Consider if reusable; if yes, place in `termux-shared`
+3. **UI Components**:
+   - Jetpack Compose for new UI screens (see KimiClaw UI layer)
+   - Consider if reusable; if yes, place in `termux-shared`
 4. **Documentation**: Update relevant changelogs
 
 ### Working with Native Code
@@ -282,9 +317,23 @@ Examples: `0.118.0`, `0.118.1-beta`, `0.118.0+build.123`
 - Bootstrap zip is downloaded at build time from termux-packages releases
 - Checksums are validated for security
 
-### Plugin Development
+### KimiClaw Service Architecture
 
-The `termux-shared` library is published on JitPack for plugin use:
+The KimiClawService is a foreground service that:
+- Uses Kotlin coroutines for async operations
+- Provides shell command execution with timeout support
+- Manages long-running jobs with cancellation support
+- Updates notifications to show service status
+
+Key methods:
+- `executeCommand()` - Execute single command with callback
+- `executeCommandSuspend()` - Suspend function for coroutines
+- `executeLongRunningCommand()` - Execute with progress callbacks
+
+## Plugin Development
+
+The `termux-shared`, `terminal-view`, and `terminal-emulator` libraries are published on JitPack for plugin use:
+
 ```gradle
 implementation 'com.termux:termux-shared:0.118.0'
 implementation 'com.termux:terminal-view:0.118.0'
@@ -298,7 +347,7 @@ implementation 'com.termux:terminal-emulator:0.118.0'
 The app requires numerous permissions including:
 - `INTERNET`, `ACCESS_NETWORK_STATE` - Network access
 - `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE` - File system access
-- `FOREGROUND_SERVICE` - Background execution
+- `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` - Background execution
 - `SYSTEM_ALERT_WINDOW` - Overlay windows
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` - Prevent process killing
 - `READ_LOGS`, `DUMP` - Debugging capabilities
@@ -324,7 +373,7 @@ Termux may be unstable on Android 12+ due to:
 - Phantom process killing (limit of 32 background processes)
 - Excessive CPU usage process killing
 
-Users may see `[Process completed (signal 9) - press Enter]` errors. Refer to issue #2366 and Android docs for workarounds.
+Users may see `[Process completed (signal 9) - press Enter]` errors. The KimiClaw UI includes `PhantomProcessHelper` and `PhantomProcessDialog` to help users manage these issues.
 
 ### Forking
 

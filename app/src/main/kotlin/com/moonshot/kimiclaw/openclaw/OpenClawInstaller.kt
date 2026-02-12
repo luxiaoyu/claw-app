@@ -1,4 +1,4 @@
-package com.moonshot.kimiclaw.installer
+package com.moonshot.kimiclaw.openclaw
 
 import android.content.Context
 import com.termux.shared.logger.Logger

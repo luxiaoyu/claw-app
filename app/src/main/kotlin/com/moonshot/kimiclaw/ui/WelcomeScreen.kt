@@ -53,20 +53,19 @@ import com.moonshot.kimiclaw.viewmodel.WelcomeViewModel
 
 /**
  * @desc   : Welcome页面，显示权限申请卡片
- * @author : luxiaoyu@moonshot.cn
- * @date   : 2026/2/11 22:24
  */
 
 @Composable
 fun WelcomeScreen(
     viewModel: WelcomeViewModel,
     onInstallClick: () -> Unit,
-    onCheckUpgrade: () -> Unit
+    onCheckUpgrade: () -> Unit,
+    onOpenDashboard: () -> Unit
 ) {
     // 从 ViewModel 收集权限状态
     val notificationEnabled by viewModel.notificationEnabled.collectAsStateWithLifecycle()
     val backgroundEnabled by viewModel.batteryOptimizationEnabled.collectAsStateWithLifecycle()
-    
+
     // 其他权限状态（后续可以移到 ViewModel）
     var batteryEnabled by remember { mutableStateOf(false) }
 
@@ -144,6 +143,32 @@ fun WelcomeScreen(
 //            )
 
             Spacer(modifier = Modifier.weight(1f))
+
+            // Open Dashboard button
+            Button(
+                onClick = onOpenDashboard,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 1.5.dp,
+                    color = lightBrandNormal
+                )
+            ) {
+                Text(
+                    text = "打开 Dashboard",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = lightBrandNormal,
+                    letterSpacing = 0.5.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Install button
             Button(
