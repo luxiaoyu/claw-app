@@ -1,5 +1,10 @@
 package com.termux.app;
 
+import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR;
+import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR_PATH;
+import static com.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR;
+import static com.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR_PATH;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -11,16 +16,16 @@ import android.util.Pair;
 import android.view.WindowManager;
 
 import com.termux.R;
+import com.termux.shared.android.PackageUtils;
+import com.termux.shared.errors.Error;
 import com.termux.shared.file.FileUtils;
-import com.termux.shared.termux.crash.TermuxCrashUtils;
-import com.termux.shared.termux.file.TermuxFileUtils;
 import com.termux.shared.interact.MessageDialogUtils;
 import com.termux.shared.logger.Logger;
 import com.termux.shared.markdown.MarkdownUtils;
-import com.termux.shared.errors.Error;
-import com.termux.shared.android.PackageUtils;
 import com.termux.shared.termux.TermuxConstants;
 import com.termux.shared.termux.TermuxUtils;
+import com.termux.shared.termux.crash.TermuxCrashUtils;
+import com.termux.shared.termux.file.TermuxFileUtils;
 import com.termux.shared.termux.shell.command.environment.TermuxShellEnvironment;
 
 import java.io.BufferedReader;
@@ -32,11 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR;
-import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR_PATH;
-import static com.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR;
-import static com.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR_PATH;
 
 /**
  * Install the Termux bootstrap packages if necessary by following the below steps:
@@ -61,7 +61,9 @@ final class TermuxInstaller {
 
     private static final String LOG_TAG = "TermuxInstaller";
 
-    /** Performs bootstrap setup if necessary. */
+    /**
+     * Performs bootstrap setup if necessary.
+     */
     static void setupBootstrapIfNeeded(final Activity activity, final Runnable whenDone) {
         String bootstrapErrorMessage;
         Error filesDirectoryAccessibleError;
@@ -220,6 +222,8 @@ final class TermuxInstaller {
 
                     // Recreate env file since termux prefix was wiped earlier
                     TermuxShellEnvironment.writeEnvironmentToFile(activity);
+
+                    copyKimiClawScripts(activity);
 
                     activity.runOnUiThread(whenDone);
 
@@ -383,4 +387,62 @@ final class TermuxInstaller {
 
     public static native byte[] getZip();
 
+    /**
+     * Creates the KimiClaw installation script and environment setup.
+     * <p>
+     * Creates:
+     * 1. $PREFIX/share/kimiclaw/install.sh — standalone installer with structured output
+     * (called by both GUI ProcessBuilder and terminal profile.d)
+     * 2. $PREFIX/etc/profile.d/kimiclaw-env.sh — environment (alias, sshd auto-start)
+     * <p>
+     * The install.sh outputs structured lines for GUI parsing:
+     * KIMICLAW_STEP:N:START:message
+     * KIMICLAW_STEP:N:DONE
+     * KIMICLAW_COMPLETE
+     * KIMICLAW_ERROR:message
+     */
+    private static void copyKimiClawScripts(Activity activity) {
+        try {
+            // Copy install.sh from assets
+            File kimiclawDir = copyAssetToFile(activity, "install.sh", TERMUX_PREFIX_DIR_PATH + "/share/kimiclaw");
+
+            // Copy kimiclaw-env.sh from assets
+            copyAssetToFile(activity, "kimiclaw-env.sh", TERMUX_PREFIX_DIR_PATH + "/etc/profile.d");
+
+            Logger.logInfo(LOG_TAG, "Created KimiClaw scripts in " + kimiclawDir.getAbsolutePath());
+        } catch (Exception e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Failed to create KimiClaw scripts", e);
+        }
+    }
+
+    /**
+     * Copies an asset file to the target directory.
+     *
+     * @param activity  The activity context
+     * @param assetName The name of the asset to copy
+     * @param targetDir The target directory path
+     * @return The target directory File object
+     * @throws Exception if copy fails
+     */
+    private static File copyAssetToFile(Activity activity, String assetName, String targetDir) throws Exception {
+        File dir = new File(targetDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        File targetFile = new File(dir, assetName);
+
+        try (java.io.InputStream is = activity.getAssets().open(assetName);
+             FileOutputStream fos = new FileOutputStream(targetFile)) {
+            byte[] buffer = new byte[8192];
+            int length;
+            while ((length = is.read(buffer)) > 0) {
+                fos.write(buffer, 0, length);
+            }
+        }
+        //noinspection OctalInteger
+        Os.chmod(targetFile.getAbsolutePath(), 0755);
+
+        return dir;
+    }
 }

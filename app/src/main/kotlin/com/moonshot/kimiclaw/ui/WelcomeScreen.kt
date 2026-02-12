@@ -60,7 +60,7 @@ import com.moonshot.kimiclaw.viewmodel.WelcomeViewModel
 @Composable
 fun WelcomeScreen(
     viewModel: WelcomeViewModel,
-    onNext: () -> Unit,
+    onInstallClick: () -> Unit,
     onCheckUpgrade: () -> Unit
 ) {
     // 从 ViewModel 收集权限状态
@@ -94,7 +94,7 @@ fun WelcomeScreen(
 
             // Title with gradient-like effect using shadow
             Text(
-                text = "Welcome to AndroidClaw",
+                text = "Welcome to KimiClaw",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = lightTextPrimary,
@@ -105,7 +105,7 @@ fun WelcomeScreen(
 
             // Description
             Text(
-                text = "AndroidClaw needs these permissions to run OpenClaw gateway reliably in background.",
+                text = "KimiClaw needs these permissions to run OpenClaw gateway reliably in background.",
                 fontSize = 15.sp,
                 color = lightTextSecondary,
                 lineHeight = 22.sp
@@ -145,9 +145,9 @@ fun WelcomeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Next button with refined styling
+            // Install button
             Button(
-                onClick = onNext,
+                onClick = onInstallClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -162,7 +162,7 @@ fun WelcomeScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
-                    text = "Get Started",
+                    text = "Install OpenClaw",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,

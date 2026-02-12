@@ -1,49 +1,54 @@
 package com.moonshot.kimiclaw
 
 import com.termux.app.TermuxActivity
+import com.termux.app.TermuxSetup
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
-import com.moonshot.kimiclaw.theme.lightBrandNormal
+import com.moonshot.kimiclaw.installer.OpenClawInstaller
+import com.moonshot.kimiclaw.installer.installSuspend
 import com.moonshot.kimiclaw.theme.lightMainSurface
-import com.moonshot.kimiclaw.theme.lightTextPrimary
-import com.moonshot.kimiclaw.theme.lightTextSecondary
+import com.termux.shared.logger.Logger
+import com.moonshot.kimiclaw.ui.InstallScreen
+import com.moonshot.kimiclaw.ui.InstallUiState
 import com.moonshot.kimiclaw.ui.WelcomeScreen
 import com.moonshot.kimiclaw.viewmodel.WelcomeViewModel
+
+/**
+ * 主屏幕状态
+ */
+private enum class MainScreen {
+    WELCOME,      // 欢迎页面（权限检查）
+    BOOTSTRAP,    // Bootstrap 安装中
+    INSTALL,      // OpenClaw 安装页面
+    TERMUX        // Termux 主界面
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -53,7 +58,6 @@ class MainActivity : ComponentActivity() {
     private val notificationSettingsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        // 从通知设置页面返回，检查权限状态
         viewModel.onReturnFromNotificationSettings()
     }
 
@@ -61,14 +65,12 @@ class MainActivity : ComponentActivity() {
     private val batteryOptimizationLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        // 从电池优化设置页面返回，检查权限状态
         viewModel.onReturnFromBatteryOptimizationSettings()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Set status bar icons to dark (for light background)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = true
 
         // 收集 ViewModel 事件
@@ -93,28 +95,140 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = lightMainSurface
                 ) {
-                    var showWelcomeScreen by remember { mutableStateOf(false) }
+                    MainContent()
+                }
+            }
+        }
+    }
 
-                    if (showWelcomeScreen) {
-                        WelcomeScreen(
-                            viewModel = viewModel,
-                            onNext = {
-                                // Start TermuxActivity
-                                val intent = Intent(this, TermuxActivity::class.java)
-                                startActivity(intent)
-                                finish()
-                            },
-                            onCheckUpgrade = {
-                                // Handle check upgrade
-                            }
-                        )
-                    } else {
-                        MainContent(
-                            onShowWelcomeScreen = {
-                                showWelcomeScreen = true
-                            }
+    @Composable
+    private fun MainContent() {
+        var currentScreen by remember { mutableStateOf(MainScreen.WELCOME) }
+        val logs = remember { mutableStateListOf<String>() }
+        var installState by remember { mutableStateOf<InstallUiState>(InstallUiState.Installing) }
+        var bootstrapStatus by remember { mutableStateOf("") }
+
+        when (currentScreen) {
+            MainScreen.WELCOME -> {
+                WelcomeScreen(
+                    viewModel = viewModel,
+                    onInstallClick = {
+                        // 检查 bootstrap 是否已安装
+                        if (TermuxSetup.isBootstrapInstalled()) {
+                            Logger.logInfo("MainActivity", "Bootstrap already installed, proceeding to OpenClaw install")
+                            currentScreen = MainScreen.INSTALL
+                        } else {
+                            Logger.logInfo("MainActivity", "Bootstrap not installed, starting setup")
+                            currentScreen = MainScreen.BOOTSTRAP
+                        }
+                    },
+                    onCheckUpgrade = {
+                        // Handle check upgrade
+                    }
+                )
+            }
+
+            MainScreen.BOOTSTRAP -> {
+                // 显示 bootstrap 安装中状态
+                LaunchedEffect(Unit) {
+                    TermuxSetup.setupBootstrapIfNeeded(
+                        activity = this@MainActivity,
+                        onComplete = {
+                            // Bootstrap 安装完成，继续安装 OpenClaw
+                            currentScreen = MainScreen.INSTALL
+                        },
+                        onStatusUpdate = { status ->
+                            bootstrapStatus = status
+                        }
+                    )
+                }
+                
+                // 简单的加载界面
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = bootstrapStatus,
+                            modifier = Modifier.padding(top = 16.dp)
                         )
                     }
+                }
+            }
+
+            MainScreen.INSTALL -> {
+                // 启动安装流程
+                LaunchedEffect(Unit) {
+                    Logger.logInfo("MainActivity", "Install screen launched, starting installation...")
+                    logs.clear()
+                    installState = InstallUiState.Installing
+
+                    try {
+                        OpenClawInstaller.installSuspend(
+                            context = this@MainActivity,
+                            onLog = { line ->
+                                logs.add(line)
+                                if (logs.size > 500) {
+                                    logs.removeAt(0)
+                                }
+                            },
+                            onError = { message ->
+                                Logger.logError("MainActivity", "Installation error: $message")
+                                installState = InstallUiState.Error(message)
+                            },
+                            onComplete = {
+                                Logger.logInfo("MainActivity", "Installation completed successfully")
+                                installState = InstallUiState.Success
+                            }
+                        )
+                    } catch (e: Exception) {
+                        Logger.logError("MainActivity", "Installation failed with exception: ${e.message}")
+                        installState = InstallUiState.Error("Installation failed: ${e.message}")
+                    }
+                }
+
+                InstallScreen(
+                    logs = logs,
+                    installState = installState,
+                    onRetry = {
+                        // 重试安装
+                        logs.clear()
+                        installState = InstallUiState.Installing
+                        lifecycleScope.launch {
+                            OpenClawInstaller.installSuspend(
+                                context = this@MainActivity,
+                                onLog = { line ->
+                                    logs.add(line)
+                                    if (logs.size > 500) {
+                                        logs.removeAt(0)
+                                    }
+                                },
+                                onError = { message ->
+                                    installState = InstallUiState.Error(message)
+                                },
+                                onComplete = {
+                                    installState = InstallUiState.Success
+                                }
+                            )
+                        }
+                    },
+                    onContinue = {
+                        // 安装完成，进入 Termux
+                        currentScreen = MainScreen.TERMUX
+                    }
+                )
+            }
+
+            MainScreen.TERMUX -> {
+                // 跳转到 TermuxActivity
+                LaunchedEffect(Unit) {
+                    val intent = Intent(this@MainActivity, TermuxActivity::class.java)
+                    startActivity(intent)
+                    finish()
                 }
             }
         }
@@ -122,57 +236,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 每次返回页面时检查权限状态
         viewModel.checkNotificationPermission()
         viewModel.checkBatteryOptimizationStatus()
-    }
-}
-
-@Composable
-fun MainContent(onShowWelcomeScreen: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(lightMainSurface)
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "AndroidClaw",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = lightTextPrimary
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "OpenClaw Gateway for Android",
-            fontSize = 16.sp,
-            color = lightTextSecondary
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // WelcomeScreen button
-        Button(
-            onClick = onShowWelcomeScreen,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .clip(RoundedCornerShape(12.dp)),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = lightBrandNormal
-            ),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(
-                text = "WelcomeScreen",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White
-            )
-        }
     }
 }
