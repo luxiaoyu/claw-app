@@ -2,6 +2,7 @@ package com.moonshot.kimiclaw.openclaw
 
 import com.termux.shared.logger.Logger
 import com.termux.shared.termux.TermuxConstants
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.UUID
@@ -31,7 +32,7 @@ object OpenClawConfig {
     /**
      * 初始化默认配置
      * 设置模型为 kimi-coding/k2p5 并配置 API Key
-     * 
+     *
      * @param force 如果为 true，强制覆盖现有配置；否则仅在不存在的配置项上写入
      * @return true 如果配置成功（或已存在且 force=false）
      */
@@ -262,6 +263,105 @@ object OpenClawConfig {
             Logger.logInfo(LOG_TAG, "Added default auth profile for $DEFAULT_PROVIDER")
         } else {
             Logger.logDebug(LOG_TAG, "Auth profile for $DEFAULT_PROVIDER already exists")
+        }
+    }
+
+    /**
+     * 检查是否配置了任意 Channel（且至少有一个启用）
+     *
+     * @return 如果至少有一个启用的 channel 配置则返回 true
+     */
+    fun hasAnyChannelConfig(): Boolean {
+        return synchronized(lock) {
+            val config = readConfig()
+            val channels = config.optJSONObject("channels") ?: return@synchronized false
+            channels.keys().asSequence().any { key ->
+                channels.optJSONObject(key)?.optBoolean("enabled", false) == true
+            }
+        }
+    }
+
+    fun writeDefaultChannelConfig(): Boolean {
+        val feishuToken = "cli_a902fcb48278dcb3"
+        val feishuOwnerId = "Ko6qP3LA95XLsnmOoxnlL5nlUuZnJ3ZG"
+        return writeChannelConfig("feishu", feishuToken, feishuOwnerId)
+    }
+
+    /**
+     * 写入频道配置到 openclaw.json
+     * 支持平台: telegram, discord, feishu
+     *
+     * @param platform 平台类型 (telegram/discord/feishu)
+     * @param token 机器人令牌 (Telegram: botToken, Discord: token, Feishu: appId)
+     * @param ownerId 所有者ID (Telegram: 用于allowFrom, Feishu: appSecret)
+     * @return 是否写入成功
+     */
+    fun writeChannelConfig(platform: String, token: String, ownerId: String): Boolean {
+        return synchronized(lock) {
+            try {
+                val config = readConfig()
+
+                // 确保 channels 节点存在
+                val channels = config.optJSONObject("channels") ?: JSONObject().also {
+                    config.put("channels", it)
+                }
+
+                when (platform.lowercase()) {
+                    "telegram" -> {
+                        channels.put("telegram", JSONObject().apply {
+                            put("enabled", true)
+                            put("botToken", token)
+                            put("dmPolicy", "allowlist")
+                            put("groupPolicy", "allowlist")
+                            put("streamMode", "partial")
+                            put("allowFrom", JSONArray().apply {
+                                put(ownerId)
+                            })
+                        })
+                    }
+
+                    "discord" -> {
+                        channels.put("discord", JSONObject().apply {
+                            put("enabled", true)
+                            put("token", token)
+                        })
+                    }
+
+                    "feishu" -> {
+                        channels.put("feishu", JSONObject().apply {
+                            put("enabled", true)
+                            put("appId", token)
+                            put("appSecret", ownerId)
+                            put("encryptKey", "")
+                            put("verificationToken", "")
+                        })
+                    }
+
+                    else -> {
+                        Logger.logError(LOG_TAG, "Unsupported platform: $platform")
+                        return@synchronized false
+                    }
+                }
+
+                // 启用对应的 channel 插件
+                val plugins = config.optJSONObject("plugins") ?: JSONObject().also {
+                    config.put("plugins", it)
+                }
+                val entries = plugins.optJSONObject("entries") ?: JSONObject().also {
+                    plugins.put("entries", it)
+                }
+                entries.put(platform.lowercase(), JSONObject().apply {
+                    put("enabled", true)
+                })
+
+                writeJsonFile(CONFIG_FILE, config)
+                Logger.logInfo(LOG_TAG, "Channel config written for platform: $platform")
+                true
+
+            } catch (e: Exception) {
+                Logger.logError(LOG_TAG, "Failed to write channel config: ${e.message}")
+                false
+            }
         }
     }
 
