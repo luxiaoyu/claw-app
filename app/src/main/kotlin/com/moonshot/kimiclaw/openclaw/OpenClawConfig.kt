@@ -1,12 +1,12 @@
 package com.moonshot.kimiclaw.openclaw
 
-import com.moonshot.kimiclaw.ui.ChannelsStatus
 import com.termux.shared.logger.Logger
 import com.termux.shared.termux.TermuxConstants
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.UUID
+import com.moonshot.kimiclaw.ui.ChannelsStatus
 
 /**
  * OpenClaw 配置管理器
@@ -63,6 +63,8 @@ object OpenClawConfig {
                     // 合并：添加默认配置到现有配置
                     mergeDefaultAuthProfile()
                 }
+
+                writeDefaultChannelConfig()
 
                 Logger.logInfo(LOG_TAG, "Default config ready ($DEFAULT_PROVIDER/$DEFAULT_MODEL)")
                 true

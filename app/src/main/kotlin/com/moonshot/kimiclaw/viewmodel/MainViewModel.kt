@@ -170,11 +170,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * 启动 Gateway
      */
     fun startGateway() {
-        if (OpenClawConfig.hasAnyChannelConfig().not()) {
-            OpenClawConfig.writeDefaultChannelConfig()
-            Logger.logInfo(LOG_TAG, "No channel config found, wrote default config")
-        }
-
         // 检查是否已有正在进行的启动任务
         if (gatewayStartJob?.isActive == true) {
             Logger.logWarn(LOG_TAG, "Gateway start already in progress")

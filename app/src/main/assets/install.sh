@@ -115,6 +115,7 @@ fi
 echo "Network OK"
 
 # Clean npm cache to avoid issues with failed git clones
+echo "Installing OpenClaw..."
 rm -rf "$HOME/.npm/_cacache/tmp" 2>/dev/null || true
 rm -rf $PREFIX/lib/node_modules/openclaw 2>/dev/null
 NPM_OUTPUT=$("$NODE" "$NPM_CLI" install -g openclaw@latest --ignore-scripts --force 2>&1)
@@ -142,6 +143,18 @@ export SSL_CERT_FILE="$PREFIX/etc/tls/cert.pem"
 export NODE_OPTIONS="--dns-result-order=ipv4first"
 exec "$PREFIX/bin/termux-chroot" "$PREFIX/bin/node" "$ENTRY" "$@"
 KIMICLAW_OPENCLAW_WRAPPER
+
+    # Install sharp-wasm32 for Android image processing support
+    echo "Installing image processing support"
+    cd $PREFIX/lib/node_modules/openclaw
+    SHARP_OUTPUT=$("$NODE" "$NPM_CLI" install --force --cpu=wasm32 @img/sharp-wasm32 2>&1)
+    SHARP_EXIT=$?
+    if [ $SHARP_EXIT -eq 0 ]; then
+        echo "KIMICLAW_INFO:Image processing support installed"
+    else
+        echo "KIMICLAW_WARN:Failed to install image processing support (exit $SHARP_EXIT): $SHARP_OUTPUT"
+    fi
+
     chmod 755 $PREFIX/bin/openclaw
     touch "$MARKER"
     echo "KIMICLAW_COMPLETE"
