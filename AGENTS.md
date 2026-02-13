@@ -92,11 +92,12 @@ termux-shared -> terminal-view -> terminal-emulator
 - `MainActivity.kt` - Entry point with Jetpack Compose UI (Welcome, Dashboard, Install screens)
 - `KimiClawService.kt` - Foreground service for managing shell commands with coroutines
 - `TermuxSetup.kt` - Bootstrap installation helper
-- `ui/` - Compose screens (WelcomeScreen, DashboardScreen, InstallScreen, etc.)
+- `ui/` - Compose screens (WelcomeScreen, DashboardScreen, InstallScreen, LogcatScreen, PhantomProcessDialog)
 - `viewmodel/` - ViewModels for UI state management
 - `termux/ShellUtils.kt` - Shell execution utilities with Flow support
 - `openclaw/OpenClawHelper.kt` - OpenClaw gateway management
 - `openclaw/OpenClawInstaller.kt` - OpenClaw installation logic
+- `openclaw/OpenClawConfig.kt` - OpenClaw configuration
 
 #### Shared Library (`termux-shared/src/main/java/com/termux/shared/`)
 - `termux/TermuxConstants.java` - Central constants definition
@@ -166,6 +167,12 @@ Debug builds produce multiple APKs:
 | `TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS` | Enable split APKs for debug (default: 1) |
 | `TERMUX_SPLIT_APKS_FOR_RELEASE_BUILDS` | Enable split APKs for release (default: 0) |
 | `JITPACK_NDK_VERSION` | NDK version override for JitPack builds |
+
+### Native Build
+
+The project uses NDK build system with `Android.mk` files:
+- `app/src/main/cpp/Android.mk` - Bootstrap loader
+- `terminal-emulator/src/main/jni/Android.mk` - Terminal emulator JNI
 
 ### Signing
 
@@ -351,6 +358,8 @@ The app requires numerous permissions including:
 - `SYSTEM_ALERT_WINDOW` - Overlay windows
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` - Prevent process killing
 - `READ_LOGS`, `DUMP` - Debugging capabilities
+- `WRITE_SECURE_SETTINGS`, `REQUEST_INSTALL_PACKAGES` - System settings
+- `RECEIVE_BOOT_COMPLETED`, `PACKAGE_USAGE_STATS` - System integration
 - Custom `RUN_COMMAND` permission - For other apps to execute commands
 
 ### Security Best Practices
