@@ -219,6 +219,7 @@ class MainActivity : ComponentActivity() {
         val gatewayUptime by mainViewModel.gatewayUptime.collectAsStateWithLifecycle()
         val sshAccess by mainViewModel.sshAccess.collectAsStateWithLifecycle()
         val isDebugCardVisible by mainViewModel.isDebugCardVisible.collectAsStateWithLifecycle()
+        val channelsStatus by mainViewModel.channelsStatus.collectAsStateWithLifecycle()
 
         // 进入 Dashboard 时加载 SSH 信息和开始定时检查，离开时停止
         LaunchedEffect(Unit) {
@@ -232,6 +233,7 @@ class MainActivity : ComponentActivity() {
             else 
                 com.moonshot.kimiclaw.ui.GatewayStatus.STOPPED,
             uptime = gatewayUptime,
+            channelsStatus = channelsStatus,
             sshAccess = sshAccess,
             isStartingGateway = isStartingGateway,
             isStoppingGateway = isStoppingGateway,

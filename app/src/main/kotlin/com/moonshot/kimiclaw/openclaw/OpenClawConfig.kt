@@ -1,5 +1,6 @@
 package com.moonshot.kimiclaw.openclaw
 
+import com.moonshot.kimiclaw.ui.ChannelsStatus
 import com.termux.shared.logger.Logger
 import com.termux.shared.termux.TermuxConstants
 import org.json.JSONArray
@@ -285,6 +286,24 @@ object OpenClawConfig {
         val feishuToken = "cli_a902fcb48278dcb3"
         val feishuOwnerId = "Ko6qP3LA95XLsnmOoxnlL5nlUuZnJ3ZG"
         return writeChannelConfig("feishu", feishuToken, feishuOwnerId)
+    }
+
+    /**
+     * 获取所有 Channel 的配置状态
+     *
+     * @return ChannelsStatus 包含 telegram/discord/feishu 的连接状态
+     */
+    fun getChannelsStatus(): ChannelsStatus {
+        return synchronized(lock) {
+            val config = readConfig()
+            val channels = config.optJSONObject("channels")
+
+            ChannelsStatus(
+                telegramConnected = channels?.optJSONObject("telegram")?.optBoolean("enabled", false) == true,
+                discordConnected = channels?.optJSONObject("discord")?.optBoolean("enabled", false) == true,
+                feishuConnected = channels?.optJSONObject("feishu")?.optBoolean("enabled", false) == true
+            )
+        }
     }
 
     /**

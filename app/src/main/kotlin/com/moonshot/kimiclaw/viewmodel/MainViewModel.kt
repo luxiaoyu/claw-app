@@ -18,6 +18,7 @@ import com.moonshot.kimiclaw.KimiClawService
 import com.moonshot.kimiclaw.openclaw.OpenClawConfig
 import com.moonshot.kimiclaw.openclaw.OpenClawHelper
 import com.moonshot.kimiclaw.termux.ShellUtils
+import com.moonshot.kimiclaw.ui.ChannelsStatus
 import com.moonshot.kimiclaw.ui.SshAccess
 
 /**
@@ -64,6 +65,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // SSH 访问信息
     private val _sshAccess = MutableStateFlow(SshAccess())
     val sshAccess: StateFlow<SshAccess> = _sshAccess
+
+    // Channels 连接状态
+    private val _channelsStatus = MutableStateFlow(ChannelsStatus())
+    val channelsStatus: StateFlow<ChannelsStatus> = _channelsStatus
 
     // Dashboard Debug Card 显示状态（跨页面保持）
     private val _isDebugCardVisible = MutableStateFlow(false)
@@ -343,6 +348,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _gatewayUptime.value = "—"
             }
         }
+
+        // 刷新 Channels 状态
+        refreshChannelsStatus()
+    }
+
+    /**
+     * 刷新 Channels 连接状态
+     */
+    private fun refreshChannelsStatus() {
+        val status = OpenClawConfig.getChannelsStatus()
+        _channelsStatus.value = status
+        Logger.logDebug(LOG_TAG, "Channels status refreshed: telegram=${status.telegramConnected}, discord=${status.discordConnected}, feishu=${status.feishuConnected}")
     }
 
     /**
