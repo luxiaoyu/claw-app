@@ -34,11 +34,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import com.moonshot.kimiclaw.openclaw.OpenClawHelper
-import com.moonshot.kimiclaw.theme.lightMainSurface
+import com.moonshot.kimiclaw.ui.theme.lightMainSurface
 import com.moonshot.kimiclaw.ui.DashboardScreen
 import com.moonshot.kimiclaw.ui.InstallScreen
 import com.moonshot.kimiclaw.ui.LogcatScreen
-import com.moonshot.kimiclaw.ui.SshAccess
 import com.moonshot.kimiclaw.ui.WelcomeScreen
 import com.moonshot.kimiclaw.viewmodel.DashboardViewModel
 import com.moonshot.kimiclaw.viewmodel.InstallViewModel

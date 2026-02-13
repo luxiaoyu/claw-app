@@ -54,15 +54,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import com.moonshot.kimiclaw.theme.lightBrandNormal
-import com.moonshot.kimiclaw.theme.lightBubbleSurface
-import com.moonshot.kimiclaw.theme.lightError
-import com.moonshot.kimiclaw.theme.lightMainSurface
-import com.moonshot.kimiclaw.theme.lightSuccess
-import com.moonshot.kimiclaw.theme.lightSurface06
-import com.moonshot.kimiclaw.theme.lightTextCaption
-import com.moonshot.kimiclaw.theme.lightTextPrimary
-import com.moonshot.kimiclaw.theme.lightTextSecondary
+import com.moonshot.kimiclaw.ui.theme.lightBrandNormal
+import com.moonshot.kimiclaw.ui.theme.lightBubbleSurface
+import com.moonshot.kimiclaw.ui.theme.lightError
+import com.moonshot.kimiclaw.ui.theme.lightMainSurface
+import com.moonshot.kimiclaw.ui.theme.lightSuccess
+import com.moonshot.kimiclaw.ui.theme.lightSurface06
+import com.moonshot.kimiclaw.ui.theme.lightTextCaption
+import com.moonshot.kimiclaw.ui.theme.lightTextPrimary
+import com.moonshot.kimiclaw.ui.theme.lightTextSecondary
 
 /**
  * Dashboard 页面

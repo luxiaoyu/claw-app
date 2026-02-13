@@ -1,4 +1,4 @@
-package com.moonshot.kimiclaw.theme
+package com.moonshot.kimiclaw.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

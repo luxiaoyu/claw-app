@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
@@ -40,15 +39,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.moonshot.kimiclaw.theme.lightBrandNormal
-import com.moonshot.kimiclaw.theme.lightBubbleSurface
-import com.moonshot.kimiclaw.theme.lightMainSurface
-import com.moonshot.kimiclaw.theme.lightSuccess
-import com.moonshot.kimiclaw.theme.lightSurface02
-import com.moonshot.kimiclaw.theme.lightSurface06
-import com.moonshot.kimiclaw.theme.lightTextCaption
-import com.moonshot.kimiclaw.theme.lightTextPrimary
-import com.moonshot.kimiclaw.theme.lightTextSecondary
+import com.moonshot.kimiclaw.ui.theme.lightBrandNormal
+import com.moonshot.kimiclaw.ui.theme.lightBubbleSurface
+import com.moonshot.kimiclaw.ui.theme.lightMainSurface
+import com.moonshot.kimiclaw.ui.theme.lightSuccess
+import com.moonshot.kimiclaw.ui.theme.lightSurface02
+import com.moonshot.kimiclaw.ui.theme.lightSurface06
+import com.moonshot.kimiclaw.ui.theme.lightTextCaption
+import com.moonshot.kimiclaw.ui.theme.lightTextPrimary
+import com.moonshot.kimiclaw.ui.theme.lightTextSecondary
 import com.moonshot.kimiclaw.viewmodel.WelcomeViewModel
 
 /**

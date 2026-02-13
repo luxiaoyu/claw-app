@@ -23,7 +23,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.moonshot.kimiclaw.PhantomProcessHelper
-import com.moonshot.kimiclaw.theme.*
+import com.moonshot.kimiclaw.ui.theme.lightBrandNormal
+import com.moonshot.kimiclaw.ui.theme.lightBubbleSurface
+import com.moonshot.kimiclaw.ui.theme.lightSuccess
+import com.moonshot.kimiclaw.ui.theme.lightSurface06
+import com.moonshot.kimiclaw.ui.theme.lightTextCaption
+import com.moonshot.kimiclaw.ui.theme.lightTextPrimary
+import com.moonshot.kimiclaw.ui.theme.lightTextSecondary
 
 /**
  * Phantom Process Killing 说明对话框
