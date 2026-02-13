@@ -37,8 +37,10 @@ import com.moonshot.kimiclaw.openclaw.OpenClawHelper
 import com.moonshot.kimiclaw.theme.lightMainSurface
 import com.moonshot.kimiclaw.ui.DashboardScreen
 import com.moonshot.kimiclaw.ui.InstallScreen
+import com.moonshot.kimiclaw.ui.LogcatScreen
 import com.moonshot.kimiclaw.ui.SshAccess
 import com.moonshot.kimiclaw.ui.WelcomeScreen
+import com.moonshot.kimiclaw.viewmodel.DashboardViewModel
 import com.moonshot.kimiclaw.viewmodel.InstallViewModel
 import com.moonshot.kimiclaw.viewmodel.MainViewModel
 import com.moonshot.kimiclaw.viewmodel.WelcomeViewModel
@@ -53,6 +55,7 @@ class MainActivity : ComponentActivity() {
     private val welcomeViewModel: WelcomeViewModel by viewModels()
     private val mainViewModel: MainViewModel by viewModels()
     private val installViewModel: InstallViewModel by viewModels()
+    private val dashboardViewModel: DashboardViewModel by viewModels()
 
     // KimiClawService 绑定
     private var kimiClawService: KimiClawService? = null
@@ -194,6 +197,7 @@ class MainActivity : ComponentActivity() {
             MainViewModel.MainScreen.DASHBOARD -> DashboardScreenContent()
             MainViewModel.MainScreen.BOOTSTRAP -> BootstrapScreenContent()
             MainViewModel.MainScreen.INSTALL -> InstallScreenContent()
+            MainViewModel.MainScreen.LOGCAT -> LogcatScreenContent()
             MainViewModel.MainScreen.TERMUX -> TermuxScreenContent()
         }
     }
@@ -215,6 +219,7 @@ class MainActivity : ComponentActivity() {
         val isGatewayRunning by mainViewModel.isGatewayRunning.collectAsStateWithLifecycle()
         val gatewayUptime by mainViewModel.gatewayUptime.collectAsStateWithLifecycle()
         val sshAccess by mainViewModel.sshAccess.collectAsStateWithLifecycle()
+        val isDebugCardVisible by mainViewModel.isDebugCardVisible.collectAsStateWithLifecycle()
 
         // 进入 Dashboard 时加载 SSH 信息和开始定时检查，离开时停止
         LaunchedEffect(Unit) {
@@ -231,9 +236,11 @@ class MainActivity : ComponentActivity() {
             sshAccess = sshAccess,
             isStartingGateway = isStartingGateway,
             isStoppingGateway = isStoppingGateway,
+            isDebugCardVisible = isDebugCardVisible,
             onCheckUpgrade = { mainViewModel.checkUpgrade() },
             onStartGateway = { mainViewModel.startGateway() },
             onStopGateway = { mainViewModel.stopGateway() },
+            onToggleDebugCard = { mainViewModel.toggleDebugCard() },
             onViewLogs = { mainViewModel.viewLogs() },
             onOpenTerminal = { mainViewModel.navigateToTermux() },
             onReportIssue = { mainViewModel.reportIssue() }
@@ -298,6 +305,14 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(Unit) {
             navigateToTermux()
         }
+    }
+
+    @Composable
+    private fun LogcatScreenContent() {
+        LogcatScreen(
+            viewModel = dashboardViewModel,
+            onBack = { mainViewModel.navigateBackToDashboard() }
+        )
     }
 
 }

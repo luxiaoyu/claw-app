@@ -1,11 +1,13 @@
 package com.moonshot.kimiclaw.ui
 
 import com.termux.R
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,8 +26,8 @@ import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Upgrade
 import androidx.compose.material.icons.outlined.FlightTakeoff
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Card
@@ -34,6 +36,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,12 +53,12 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import com.moonshot.kimiclaw.theme.lightBrandNormal
 import com.moonshot.kimiclaw.theme.lightBubbleSurface
 import com.moonshot.kimiclaw.theme.lightError
 import com.moonshot.kimiclaw.theme.lightMainSurface
 import com.moonshot.kimiclaw.theme.lightSuccess
-import com.moonshot.kimiclaw.theme.lightSurface02
 import com.moonshot.kimiclaw.theme.lightSurface06
 import com.moonshot.kimiclaw.theme.lightTextCaption
 import com.moonshot.kimiclaw.theme.lightTextPrimary
@@ -70,13 +77,32 @@ fun DashboardScreen(
     isCheckingUpgrade: Boolean = false,
     isStartingGateway: Boolean = false,
     isStoppingGateway: Boolean = false,
+    isDebugCardVisible: Boolean = false,
     onCheckUpgrade: () -> Unit = {},
     onStartGateway: () -> Unit = {},
     onStopGateway: () -> Unit = {},
+    onToggleDebugCard: () -> Unit = {},
     onViewLogs: () -> Unit = {},
     onOpenTerminal: () -> Unit = {},
     onReportIssue: () -> Unit = {}
 ) {
+    // 本地 UI 层 uptime 秒数，用于每秒自动增加
+    var uiUptimeSeconds by remember { mutableIntStateOf(0) }
+    // 显示用的 uptime 字符串
+    val displayUptime = remember(uiUptimeSeconds) { formatUptime(uiUptimeSeconds) }
+
+    // 当外部 uptime 更新时，解析并同步到本地状态
+    LaunchedEffect(uptime) {
+        uiUptimeSeconds = parseUptimeToSeconds(uptime)
+    }
+
+    // UI 层每秒自动增加 uptime（只在 gateway 运行时）
+    LaunchedEffect(gatewayStatus, uiUptimeSeconds) {
+        if (gatewayStatus == GatewayStatus.RUNNING) {
+            delay(1000)
+            uiUptimeSeconds++
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -101,20 +127,11 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // App Icon
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(lightBrandNormal.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.mipmap.ic_launcher),
-                            contentDescription = "KimiClaw",
-                            tint = lightBrandNormal,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
+                    Image(
+                        painter = painterResource(id = R.mipmap.ic_launcher),
+                        contentDescription = "KimiClaw",
+                        modifier = Modifier.size(44.dp)
+                    )
 
                     Spacer(modifier = Modifier.width(12.dp))
 
@@ -127,15 +144,28 @@ fun DashboardScreen(
                     )
                 }
 
-                // Check Upgrade Button
-                ActionButton(
-                    text = "Check Upgrade",
-                    icon = if (isCheckingUpgrade) null else Icons.Default.Refresh,
-                    isLoading = isCheckingUpgrade,
-                    onClick = onCheckUpgrade,
-                    containerColor = lightSurface02,
-                    contentColor = lightTextSecondary
-                )
+                // Action Buttons Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Check Upgrade Button
+                    ActionButton(
+                        icon = if (isCheckingUpgrade) null else Icons.Default.Upgrade,
+                        isLoading = isCheckingUpgrade,
+                        onClick = onCheckUpgrade,
+                        containerColor = Color.White,
+                        contentColor = lightTextSecondary
+                    )
+
+                    // Debug Toggle Button
+                    ActionButton(
+                        icon = Icons.Default.BugReport,
+                        onClick = onToggleDebugCard,
+                        containerColor = if (isDebugCardVisible) lightBrandNormal else Color.White,
+                        contentColor = if (isDebugCardVisible) Color.White else lightTextSecondary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -143,7 +173,7 @@ fun DashboardScreen(
             // OpenClaw Gateway Card
             GatewayCard(
                 status = gatewayStatus,
-                uptime = uptime,
+                uptime = displayUptime,
                 isStarting = isStartingGateway,
                 isStopping = isStoppingGateway,
                 onStart = onStartGateway,
@@ -158,12 +188,14 @@ fun DashboardScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Debug Card
-            DebugCard(
-                sshAccess = sshAccess,
-                onViewLogs = onViewLogs,
-                onOpenTerminal = onOpenTerminal,
-                onReportIssue = onReportIssue
-            )
+            if (isDebugCardVisible) {
+                DebugCard(
+                    sshAccess = sshAccess,
+                    onViewLogs = onViewLogs,
+                    onOpenTerminal = onOpenTerminal,
+                    onReportIssue = onReportIssue
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -499,7 +531,7 @@ private fun DashboardCard(content: @Composable () -> Unit) {
  */
 @Composable
 private fun ActionButton(
-    text: String,
+    text: String? = null,
     icon: ImageVector? = null,
     isLoading: Boolean = false,
     enabled: Boolean = true,
@@ -508,12 +540,18 @@ private fun ActionButton(
     contentColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val isIconOnly = text == null && icon != null
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .shadow(
+                elevation = if (isIconOnly) 2.dp else 1.dp,
+                shape = RoundedCornerShape(if (isIconOnly) 14.dp else 12.dp),
+                spotColor = Color.Black.copy(alpha = 0.08f)
+            )
+            .clip(RoundedCornerShape(if (isIconOnly) 14.dp else 12.dp))
             .background(if (enabled) containerColor else containerColor.copy(alpha = 0.5f))
             .clickable(enabled = enabled && !isLoading, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(if (isIconOnly) PaddingValues(11.dp) else PaddingValues(horizontal = 16.dp, vertical = 12.dp)),
         contentAlignment = Alignment.Center
     ) {
         if (isLoading) {
@@ -526,18 +564,20 @@ private fun ActionButton(
                     color = contentColor,
                     strokeWidth = 2.dp
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = when {
-                        text.contains("Upgrade") -> "Checking..."
-                        text.contains("Start") -> "Starting..."
-                        text.contains("Stop") -> "Stopping..."
-                        else -> "Loading..."
-                    },
-                    fontSize = 14.sp,
-                    color = contentColor,
-                    fontWeight = FontWeight.Medium
-                )
+                if (text != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = when {
+                            text.contains("Upgrade") -> "Checking..."
+                            text.contains("Start") -> "Starting..."
+                            text.contains("Stop") -> "Stopping..."
+                            else -> "Loading..."
+                        },
+                        fontSize = 14.sp,
+                        color = contentColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         } else {
             Row(
@@ -551,14 +591,18 @@ private fun ActionButton(
                         tint = contentColor,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    if (text != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
                 }
-                Text(
-                    text = text,
-                    fontSize = 14.sp,
-                    color = contentColor,
-                    fontWeight = FontWeight.Medium
-                )
+                if (text != null) {
+                    Text(
+                        text = text,
+                        fontSize = 14.sp,
+                        color = contentColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }
@@ -682,3 +726,77 @@ data class SshAccess(
     val port: Int = 8022,
     val password: String = "kimiclaw"
 )
+
+// ==================== Uptime Helpers ====================
+
+/**
+ * 解析 uptime 字符串为秒数
+ * 支持格式: "—", "01:23:45", "1-02:03:04" (ps etime 格式)
+ */
+private fun parseUptimeToSeconds(uptime: String): Int {
+    if (uptime == "—" || uptime == "--" || uptime.isBlank()) {
+        return 0
+    }
+
+    return try {
+        val trimmed = uptime.trim()
+
+        // 格式: [[dd-]hh:]mm:ss
+        val parts = trimmed.split("-")
+        val hasDays = parts.size > 1
+
+        val days = if (hasDays) parts[0].toInt() else 0
+        val timePart = if (hasDays) parts[1] else parts[0]
+
+        val timeComponents = timePart.split(":")
+        val seconds = when (timeComponents.size) {
+            3 -> {
+                // hh:mm:ss
+                val hours = timeComponents[0].toInt()
+                val minutes = timeComponents[1].toInt()
+                val secs = timeComponents[2].toInt()
+                days * 86400 + hours * 3600 + minutes * 60 + secs
+            }
+
+            2 -> {
+                // mm:ss
+                val minutes = timeComponents[0].toInt()
+                val secs = timeComponents[1].toInt()
+                days * 86400 + minutes * 60 + secs
+            }
+
+            1 -> {
+                // ss
+                days * 86400 + timeComponents[0].toInt()
+            }
+
+            else -> 0
+        }
+        seconds
+    } catch (e: Exception) {
+        0
+    }
+}
+
+/**
+ * 将秒数格式化为 uptime 显示字符串
+ * 格式: "1d 02h 03m 04s" 或 "02:03:04"（如果小于1天）
+ */
+private fun formatUptime(seconds: Int): String {
+    if (seconds <= 0) {
+        return "—"
+    }
+
+    val days = seconds / 86400
+    val hours = (seconds % 86400) / 3600
+    val minutes = (seconds % 3600) / 60
+    val secs = seconds % 60
+
+    return if (days > 0) {
+        String.format("%dd %02dh %02dm %02ds", days, hours, minutes, secs)
+    } else if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, secs)
+    } else {
+        String.format("%02d:%02d", minutes, secs)
+    }
+}

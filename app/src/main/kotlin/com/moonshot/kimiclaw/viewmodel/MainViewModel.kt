@@ -38,6 +38,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         DASHBOARD,    // Dashboard 页面
         BOOTSTRAP,    // Bootstrap 安装中
         INSTALL,      // OpenClaw 安装页面
+        LOGCAT,       // Logcat 日志页面
         TERMUX        // Termux 主界面
     }
 
@@ -63,6 +64,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // SSH 访问信息
     private val _sshAccess = MutableStateFlow(SshAccess())
     val sshAccess: StateFlow<SshAccess> = _sshAccess
+
+    // Dashboard Debug Card 显示状态（跨页面保持）
+    private val _isDebugCardVisible = MutableStateFlow(false)
+    val isDebugCardVisible: StateFlow<Boolean> = _isDebugCardVisible
+
+    /**
+     * 切换 Debug Card 显示状态
+     */
+    fun toggleDebugCard() {
+        _isDebugCardVisible.value = !_isDebugCardVisible.value
+    }
 
     // 定时检查 Gateway 状态的任务
     private var gatewayStatusCheckJob: Job? = null
@@ -244,11 +256,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Logger.logInfo(LOG_TAG, "Check upgrade clicked")
     }
 
-    // ==================== 查看日志（占位）====================
+    // ==================== 查看日志 ====================
 
     fun viewLogs() {
-        // TODO: 实现查看日志逻辑
-        Logger.logInfo(LOG_TAG, "View logs clicked")
+        Logger.logInfo(LOG_TAG, "View logs clicked, navigating to LOGCAT screen")
+        _currentScreen.value = MainScreen.LOGCAT
+    }
+
+    /**
+     * 返回 Dashboard
+     */
+    fun navigateBackToDashboard() {
+        _currentScreen.value = MainScreen.DASHBOARD
     }
 
     // ==================== 上报问题（占位）====================
