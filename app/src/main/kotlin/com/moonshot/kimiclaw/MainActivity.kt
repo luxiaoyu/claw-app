@@ -34,11 +34,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import com.moonshot.kimiclaw.openclaw.OpenClawHelper
-import com.moonshot.kimiclaw.ui.theme.lightMainSurface
 import com.moonshot.kimiclaw.ui.DashboardScreen
+import com.moonshot.kimiclaw.ui.GatewayStatus
 import com.moonshot.kimiclaw.ui.InstallScreen
 import com.moonshot.kimiclaw.ui.LogcatScreen
+import com.moonshot.kimiclaw.ui.VideoSplashScreen
 import com.moonshot.kimiclaw.ui.WelcomeScreen
+import com.moonshot.kimiclaw.ui.theme.lightMainSurface
 import com.moonshot.kimiclaw.viewmodel.DashboardViewModel
 import com.moonshot.kimiclaw.viewmodel.InstallViewModel
 import com.moonshot.kimiclaw.viewmodel.MainViewModel
@@ -164,7 +166,8 @@ class MainActivity : ComponentActivity() {
                 // InstallViewModel 事件
                 launch {
                     installViewModel.installCompleteEvent.collect {
-                        mainViewModel.onOpenClawInstallComplete()
+                        // 安装完成，跳转到 Dashboard
+                        mainViewModel.openDashboard()
                     }
                 }
             }
@@ -180,8 +183,9 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun MainContent() {
         val currentScreen by mainViewModel.currentScreen.collectAsStateWithLifecycle()
+        val isSplashOverlayVisible by mainViewModel.isSplashOverlayVisible.collectAsStateWithLifecycle()
 
-        // 启动时检查 OpenClaw 安装状态，决定初始屏幕
+        // 启动时检查 OpenClaw 安装状态，决定初始页面
         LaunchedEffect(Unit) {
             if (OpenClawHelper.isOpenclawInstalled()) {
                 Logger.logInfo("MainActivity", "OpenClaw is installed, opening Dashboard")
@@ -191,14 +195,34 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        when (currentScreen) {
-            MainViewModel.MainScreen.WELCOME -> WelcomeScreenContent()
-            MainViewModel.MainScreen.DASHBOARD -> DashboardScreenContent()
-            MainViewModel.MainScreen.BOOTSTRAP -> BootstrapScreenContent()
-            MainViewModel.MainScreen.INSTALL -> InstallScreenContent()
-            MainViewModel.MainScreen.LOGCAT -> LogcatScreenContent()
-            MainViewModel.MainScreen.TERMUX -> TermuxScreenContent()
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 底层页面内容
+            when (currentScreen) {
+                MainViewModel.MainScreen.WELCOME -> WelcomeScreenContent()
+                MainViewModel.MainScreen.DASHBOARD -> DashboardScreenContent()
+                MainViewModel.MainScreen.BOOTSTRAP -> BootstrapScreenContent()
+                MainViewModel.MainScreen.INSTALL -> InstallScreenContent()
+                MainViewModel.MainScreen.LOGCAT -> LogcatScreenContent()
+                MainViewModel.MainScreen.TERMUX -> TermuxScreenContent()
+            }
+
+            // 视频开屏覆盖层（显示在最上层）
+            if (isSplashOverlayVisible) {
+                SplashOverlayContent()
+            }
         }
+    }
+
+    @Composable
+    private fun SplashOverlayContent() {
+        VideoSplashScreen(
+            onVideoComplete = {
+                // 视频播放完成后隐藏覆盖层，露出下面的页面
+                mainViewModel.hideSplashOverlay()
+            },
+            minDisplayTimeMs = 2000L,  // 最少显示2秒
+            autoAdvanceDelayMs = 500L   // 视频结束后延迟500ms隐藏
+        )
     }
 
     @Composable
@@ -228,10 +252,7 @@ class MainActivity : ComponentActivity() {
         }
 
         DashboardScreen(
-            gatewayStatus = if (isGatewayRunning) 
-                com.moonshot.kimiclaw.ui.GatewayStatus.RUNNING 
-            else 
-                com.moonshot.kimiclaw.ui.GatewayStatus.STOPPED,
+            gatewayStatus = if (isGatewayRunning) GatewayStatus.RUNNING else GatewayStatus.STOPPED,
             uptime = gatewayUptime,
             channelsStatus = channelsStatus,
             sshAccess = sshAccess,
@@ -257,6 +278,7 @@ class MainActivity : ComponentActivity() {
                 activity = this@MainActivity,
                 onComplete = {
                     installViewModel.onBootstrapComplete()
+                    // Bootstrap 完成后跳转到 INSTALL 页面
                     mainViewModel.onBootstrapInstallComplete()
                 },
                 onStatusUpdate = { status -> installViewModel.updateBootstrapStatus(status) }
@@ -284,20 +306,34 @@ class MainActivity : ComponentActivity() {
         val logs by installViewModel.installLogs.collectAsStateWithLifecycle()
         val installState by installViewModel.installState.collectAsStateWithLifecycle()
 
+        // 首次进入页面时启动安装和显示视频
         LaunchedEffect(Unit) {
+            // 先启动安装（在后台协程中运行）
             installViewModel.startOpenClawInstallation()
+            // 延迟 2000ms 确保安装协程启动并运行后再显示视频
+            kotlinx.coroutines.delay(2000)
+            // 再显示视频覆盖层（视频播放期间安装在后台进行）
+            mainViewModel.showSplashAtInstallStart()
         }
 
         InstallScreen(
             logs = logs,
             installState = installState,
             onRetry = {
-                installViewModel.retryInstallation()
                 lifecycleScope.launch {
+                    // 先隐藏当前视频
+                    mainViewModel.hideSplashOverlay()
+                    // 重置视频标记
+                    mainViewModel.resetInstallSplashFlag()
+                    // 重置安装状态并重新启动
+                    installViewModel.resetInstallation()
                     installViewModel.startOpenClawInstallation()
                 }
             },
-            onContinue = { installViewModel.onInstallContinue() }
+            onContinue = {
+                // 触发安装完成事件，通过事件回调跳转到 Dashboard
+                installViewModel.onInstallContinue()
+            }
         )
     }
 

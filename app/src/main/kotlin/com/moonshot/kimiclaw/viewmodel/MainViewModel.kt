@@ -43,9 +43,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         TERMUX        // Termux 主界面
     }
 
-    // 当前屏幕状态
+    // 当前屏幕状态（默认从欢迎页开始）
     private val _currentScreen = MutableStateFlow(MainScreen.WELCOME)
     val currentScreen: StateFlow<MainScreen> = _currentScreen
+
+    // 视频开屏覆盖层显示状态（用于安装时播放视频）
+    private val _isSplashOverlayVisible = MutableStateFlow(false)
+    val isSplashOverlayVisible: StateFlow<Boolean> = _isSplashOverlayVisible
+
+    // 标记是否已经播放过视频（防止反复播放）
+    private var hasShownSplashForInstall = false
+
+    /**
+     * Install 开始时显示视频开屏
+     */
+    fun showSplashAtInstallStart() {
+        if (!hasShownSplashForInstall) {
+            hasShownSplashForInstall = true
+            _isSplashOverlayVisible.value = true
+        }
+    }
+
+    /**
+     * 重置 Install 的视频播放标记（用于重试时重新播放）
+     */
+    fun resetInstallSplashFlag() {
+        hasShownSplashForInstall = false
+    }
+
+    /**
+     * 隐藏视频开屏覆盖层（视频播放完成后调用）
+     */
+    fun hideSplashOverlay() {
+        _isSplashOverlayVisible.value = false
+    }
 
     // Dashboard Gateway 状态
     private val _isStartingGateway = MutableStateFlow(false)

@@ -61,16 +61,34 @@ class InstallViewModel(application: Application) : AndroidViewModel(application)
 
     // ==================== OpenClaw 安装 ====================
 
+    // 标记安装是否已经开始（防止 Activity 重建导致重复启动）
+    private var isInstallationStarted = false
+
     /**
-     * 开始 OpenClaw 安装
+     * 开始 OpenClaw 安装（只会启动一次）
      */
     fun startOpenClawInstallation() {
+        if (isInstallationStarted) {
+            Logger.logInfo(LOG_TAG, "Installation already started, skipping...")
+            return
+        }
+        isInstallationStarted = true
+        
         viewModelScope.launch {
             Logger.logInfo(LOG_TAG, "Starting OpenClaw installation...")
             clearInstallLogs()
             _installState.value = InstallUiState.Installing
             executeOpenClawInstallation()
         }
+    }
+
+    /**
+     * 重置安装状态（用于重试）
+     */
+    fun resetInstallation() {
+        isInstallationStarted = false
+        clearInstallLogs()
+        _installState.value = InstallUiState.Installing
     }
 
     private suspend fun executeOpenClawInstallation() {
