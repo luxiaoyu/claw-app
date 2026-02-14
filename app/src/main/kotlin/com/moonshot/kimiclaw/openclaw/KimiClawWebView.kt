@@ -29,7 +29,7 @@ class KimiClawWebView private constructor(
          *
          * @param context Context
          * @param url 要加载的 URL
-         * @param gatewayToken Gateway Token 用于自动认证
+         * @param gatewayToken Gateway Token 用于自动认证，将作为 URL 参数传递
          * @param callbacks WebView 回调
          * @return 配置好的 KimiClawWebView 实例
          */
@@ -41,6 +41,9 @@ class KimiClawWebView private constructor(
             callbacks: WebViewCallbacks
         ): KimiClawWebView {
             Logger.logDebug(LOG_TAG, "Creating KimiClawWebView, token available: ${gatewayToken != null}")
+            
+            // 构建带 token 的 URL
+            val finalUrl = buildUrlWithToken(url, gatewayToken)
 
             val webView = WebView(context).apply {
                 layoutParams = ViewGroup.LayoutParams(
@@ -66,61 +69,32 @@ class KimiClawWebView private constructor(
                 // 设置 WebChromeClient
                 webChromeClient = createWebChromeClient(callbacks)
 
-                // 加载 URL
-                loadUrl(url)
+                // 加载 URL（带 token 参数）
+                loadUrl(finalUrl)
             }
 
             return KimiClawWebView(webView)
         }
 
         /**
-         * 生成注入 Gateway Token 的 JavaScript 代码
+         * 构建带 token 参数的 URL
+         * 
+         * @param baseUrl 基础 URL
+         * @param token Gateway Token
+         * @return 带 token 参数的 URL
          */
-        fun createTokenInjectionScript(token: String): String {
-            return """
-                (function() {
-                    try {
-                        const SETTINGS_KEY = '$SETTINGS_KEY';
-                        
-                        // 读取现有配置
-                        let settings = {};
-                        const existing = localStorage.getItem(SETTINGS_KEY);
-                        if (existing) {
-                            settings = JSON.parse(existing);
-                        }
-                        
-                        // 如果 token 已经正确设置，不需要重复注入
-                        if (settings.token === '$token') {
-                            console.log('[KimiClaw] Token already set, skipping injection');
-                            return 'token_already_set';
-                        }
-                        
-                        // 更新 token 和相关配置
-                        settings.token = '$token';
-                        settings.gatewayUrl = settings.gatewayUrl || 'ws://127.0.0.1:18789';
-                        
-                        // 保存回 localStorage
-                        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-                        
-                        // 同时设置旧的 key 以确保兼容性
-                        localStorage.setItem('openclaw-gateway-token', '$token');
-                        localStorage.setItem('gateway-token', '$token');
-                        
-                        console.log('[KimiClaw] Token injected successfully to', SETTINGS_KEY);
-                        
-                        // 触发 storage 事件通知页面更新
-                        window.dispatchEvent(new StorageEvent('storage', {
-                            key: SETTINGS_KEY,
-                            newValue: JSON.stringify(settings)
-                        }));
-                        
-                        return 'token_injected';
-                    } catch (e) {
-                        console.error('[KimiClaw] Token injection failed:', e);
-                        return 'error: ' + e.message;
-                    }
-                })();
-            """.trimIndent()
+        fun buildUrlWithToken(baseUrl: String, token: String?): String {
+            if (token.isNullOrEmpty()) {
+                return baseUrl
+            }
+            
+            return try {
+                val separator = if (baseUrl.contains("?")) "&" else "?"
+                "${baseUrl}${separator}token=${token}"
+            } catch (e: Exception) {
+                Logger.logError(LOG_TAG, "Failed to build URL with token: ${e.message}")
+                baseUrl
+            }
         }
 
         private fun createWebViewClient(
@@ -143,22 +117,8 @@ class KimiClawWebView private constructor(
                     val canGoBack = view?.canGoBack() ?: false
                     val title = view?.title ?: "OpenClaw Dashboard"
 
-                    // 注入 Gateway Token
-                    gatewayToken?.let { token ->
-                        val jsCode = createTokenInjectionScript(token)
-
-                        view?.evaluateJavascript(jsCode) { result ->
-                            Logger.logDebug(LOG_TAG, "Token injection result: $result")
-                            // 只有 token 是新注入的才刷新页面，避免无限循环
-                            if (result == "\"token_injected\"") {
-                                view.postDelayed({
-                                                     view.evaluateJavascript("window.location.reload()", null)
-                                                 }, 300)
-                            }
-                        }
-                    } ?: run {
-                        Logger.logWarn(LOG_TAG, "No gateway token available for injection")
-                    }
+                    // Token 已通过 URL 参数传递，无需 JavaScript 注入
+                    Logger.logDebug(LOG_TAG, "Page loaded with token in URL parameter")
 
                     callbacks.onPageFinished(title, canGoBack)
                 }
