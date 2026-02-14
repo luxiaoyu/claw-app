@@ -145,6 +145,24 @@ object OpenClawConfig {
     }
 
     /**
+     * 获取 Gateway Token
+     * 用于 Web Dashboard 认证
+     */
+    fun getGatewayToken(): String? {
+        return synchronized(lock) {
+            try {
+                val config = readConfig()
+                config.optJSONObject("gateway")
+                    ?.optJSONObject("auth")
+                    ?.optString("token")
+            } catch (e: Exception) {
+                Logger.logError(LOG_TAG, "Failed to get gateway token: ${e.message}")
+                null
+            }
+        }
+    }
+
+    /**
      * 更新 API Key（如果不传参数则使用默认值）
      * @return true 如果更新成功
      */

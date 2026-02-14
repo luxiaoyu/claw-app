@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -84,7 +85,8 @@ fun DashboardScreen(
     onToggleDebugCard: () -> Unit = {},
     onViewLogs: () -> Unit = {},
     onOpenTerminal: () -> Unit = {},
-    onReportIssue: () -> Unit = {}
+    onReportIssue: () -> Unit = {},
+    onOpenDashboard: () -> Unit = {}
 ) {
     // 本地 UI 层 uptime 秒数，用于每秒自动增加
     var uiUptimeSeconds by remember { mutableIntStateOf(0) }
@@ -193,7 +195,8 @@ fun DashboardScreen(
                     sshAccess = sshAccess,
                     onViewLogs = onViewLogs,
                     onOpenTerminal = onOpenTerminal,
-                    onReportIssue = onReportIssue
+                    onReportIssue = onReportIssue,
+                    onOpenDashboard = onOpenDashboard
                 )
             }
 
@@ -390,7 +393,8 @@ private fun DebugCard(
     sshAccess: SshAccess,
     onViewLogs: () -> Unit,
     onOpenTerminal: () -> Unit,
-    onReportIssue: () -> Unit
+    onReportIssue: () -> Unit,
+    onOpenDashboard: () -> Unit
 ) {
     val clipboardManager = LocalClipboardManager.current
 
@@ -476,6 +480,18 @@ private fun DebugCard(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Open Dashboard Button
+            ActionButton(
+                text = "Open Dashboard",
+                icon = Icons.Default.Dashboard,
+                onClick = onOpenDashboard,
+                containerColor = lightBrandNormal,
+                contentColor = Color.White,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Bottom buttons row
             Row(

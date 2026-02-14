@@ -35,12 +35,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * 主屏幕状态
      */
     enum class MainScreen {
-        WELCOME,      // 欢迎页面（权限检查）
-        DASHBOARD,    // Dashboard 页面
-        BOOTSTRAP,    // Bootstrap 安装中
-        INSTALL,      // OpenClaw 安装页面
-        LOGCAT,       // Logcat 日志页面
-        TERMUX        // Termux 主界面
+        WELCOME,           // 欢迎页面（权限检查）
+        DASHBOARD,         // Dashboard 页面
+        BOOTSTRAP,         // Bootstrap 安装中
+        INSTALL,           // OpenClaw 安装页面
+        LOGCAT,            // Logcat 日志页面
+        TERMUX,            // Termux 主界面
+        WEBVIEW_DASHBOARD  // OpenClaw Web Dashboard 页面
     }
 
     // 当前屏幕状态（默认从欢迎页开始）
@@ -313,6 +314,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Logger.logInfo(LOG_TAG, "Report issue clicked")
     }
 
+    /**
+     * 打开 OpenClaw Web Dashboard
+     */
+    fun openWebViewDashboard() {
+        Logger.logInfo(LOG_TAG, "Opening OpenClaw Web Dashboard")
+        _currentScreen.value = MainScreen.WEBVIEW_DASHBOARD
+    }
+
+    /**
+     * 从 WebView Dashboard 返回
+     */
+    fun navigateBackFromWebViewDashboard() {
+        Logger.logInfo(LOG_TAG, "Navigating back from WebView Dashboard")
+        _currentScreen.value = MainScreen.DASHBOARD
+    }
+
     // ==================== SSH 信息 ====================
 
     /**
@@ -385,7 +402,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun refreshChannelsStatus() {
         val status = OpenClawConfig.getChannelsStatus()
         _channelsStatus.value = status
-        Logger.logDebug(LOG_TAG, "Channels status refreshed: telegram=${status.telegramConnected}, discord=${status.discordConnected}, feishu=${status.feishuConnected}")
+        Logger.logDebug(LOG_TAG, "Channels status refreshed: telegram=${status.telegramConnected}," +
+            " discord=${status.discordConnected}, feishu=${status.feishuConnected}")
     }
 
     /**

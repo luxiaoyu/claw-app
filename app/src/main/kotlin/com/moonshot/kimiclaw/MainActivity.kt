@@ -40,6 +40,7 @@ import com.moonshot.kimiclaw.ui.InstallScreen
 import com.moonshot.kimiclaw.ui.LogcatScreen
 import com.moonshot.kimiclaw.ui.VideoSplashScreen
 import com.moonshot.kimiclaw.ui.WelcomeScreen
+import com.moonshot.kimiclaw.ui.WebViewScreen
 import com.moonshot.kimiclaw.ui.theme.lightMainSurface
 import com.moonshot.kimiclaw.viewmodel.DashboardViewModel
 import com.moonshot.kimiclaw.viewmodel.InstallViewModel
@@ -204,6 +205,7 @@ class MainActivity : ComponentActivity() {
                 MainViewModel.MainScreen.INSTALL -> InstallScreenContent()
                 MainViewModel.MainScreen.LOGCAT -> LogcatScreenContent()
                 MainViewModel.MainScreen.TERMUX -> TermuxScreenContent()
+                MainViewModel.MainScreen.WEBVIEW_DASHBOARD -> WebViewDashboardScreenContent()
             }
 
             // 视频开屏覆盖层（显示在最上层）
@@ -265,7 +267,8 @@ class MainActivity : ComponentActivity() {
             onToggleDebugCard = { mainViewModel.toggleDebugCard() },
             onViewLogs = { mainViewModel.viewLogs() },
             onOpenTerminal = { mainViewModel.navigateToTermux() },
-            onReportIssue = { mainViewModel.reportIssue() }
+            onReportIssue = { mainViewModel.reportIssue() },
+            onOpenDashboard = { mainViewModel.openWebViewDashboard() }
         )
     }
 
@@ -349,6 +352,17 @@ class MainActivity : ComponentActivity() {
         LogcatScreen(
             viewModel = dashboardViewModel,
             onBack = { mainViewModel.navigateBackToDashboard() }
+        )
+    }
+
+    @Composable
+    private fun WebViewDashboardScreenContent() {
+        val isGatewayRunning by mainViewModel.isGatewayRunning.collectAsStateWithLifecycle()
+
+        WebViewScreen(
+            url = "http://127.0.0.1:18789/",
+            onBack = { mainViewModel.navigateBackFromWebViewDashboard() },
+            isGatewayRunning = isGatewayRunning
         )
     }
 
