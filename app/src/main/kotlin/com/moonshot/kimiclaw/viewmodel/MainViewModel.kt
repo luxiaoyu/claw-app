@@ -20,6 +20,8 @@ import com.moonshot.kimiclaw.openclaw.OpenClawHelper
 import com.moonshot.kimiclaw.termux.ShellUtils
 import com.moonshot.kimiclaw.ui.ChannelsStatus
 import com.moonshot.kimiclaw.ui.SshAccess
+import android.os.Build
+import android.widget.Toast
 
 /**
  * MainActivity 的 ViewModel
@@ -157,12 +159,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * 检查 Bootstrap 并决定跳转到哪个页面
      */
     fun checkBootstrapAndNavigate() {
+        // 检测是否是64位手机
+        if (!is64BitDevice()) {
+            Logger.logError(LOG_TAG, "Device is not 64-bit, cannot install OpenClaw")
+            val context = getApplication<Application>().applicationContext
+            Toast.makeText(context, "仅支持64位手机，当前设备不支持", Toast.LENGTH_LONG).show()
+            return
+        }
+        
         if (TermuxSetup.isBootstrapInstalled()) {
             Logger.logInfo(LOG_TAG, "Bootstrap already installed, proceeding to OpenClaw install")
             _currentScreen.value = MainScreen.INSTALL
         } else {
             Logger.logInfo(LOG_TAG, "Bootstrap not installed, starting setup")
             _currentScreen.value = MainScreen.BOOTSTRAP
+        }
+    }
+    
+    /**
+     * 检测是否是64位设备
+     */
+    private fun is64BitDevice(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Build.SUPPORTED_64_BIT_ABIS?.isNotEmpty() == true
+        } else {
+            // Android 5.0 以下，通过系统属性判断
+            val abi = Build.CPU_ABI
+            abi.contains("arm64") || abi.contains("x86_64")
         }
     }
 
