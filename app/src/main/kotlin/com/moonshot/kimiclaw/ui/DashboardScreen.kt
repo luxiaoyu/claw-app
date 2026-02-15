@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +80,7 @@ fun DashboardScreen(
     isStartingGateway: Boolean = false,
     isStoppingGateway: Boolean = false,
     isDebugCardVisible: Boolean = false,
+    isDashboardReady: Boolean = false,
     onCheckUpgrade: () -> Unit = {},
     onStartGateway: () -> Unit = {},
     onStopGateway: () -> Unit = {},
@@ -187,6 +189,20 @@ fun DashboardScreen(
             // Channels Card
             ChannelsCard(channelsStatus = channelsStatus)
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Open Dashboard Button
+            ActionButton(
+                text = if (gatewayStatus == GatewayStatus.RUNNING && !isDashboardReady) "Dashboard 启动中..." else "Open Dashboard",
+                icon = if (gatewayStatus == GatewayStatus.RUNNING && !isDashboardReady) null else Icons.Default.Dashboard,
+                isLoading = gatewayStatus == GatewayStatus.RUNNING && !isDashboardReady,
+                enabled = isDashboardReady,
+                onClick = onOpenDashboard,
+                containerColor = if (isDashboardReady) lightBrandNormal else lightSurface06,
+                contentColor = if (isDashboardReady) Color.White else lightTextSecondary,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Debug Card
@@ -195,8 +211,7 @@ fun DashboardScreen(
                     sshAccess = sshAccess,
                     onViewLogs = onViewLogs,
                     onOpenTerminal = onOpenTerminal,
-                    onReportIssue = onReportIssue,
-                    onOpenDashboard = onOpenDashboard
+                    onReportIssue = onReportIssue
                 )
             }
 
@@ -393,10 +408,10 @@ private fun DebugCard(
     sshAccess: SshAccess,
     onViewLogs: () -> Unit,
     onOpenTerminal: () -> Unit,
-    onReportIssue: () -> Unit,
-    onOpenDashboard: () -> Unit
+    onReportIssue: () -> Unit
 ) {
     val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
 
     DashboardCard {
         Column(
@@ -446,6 +461,7 @@ private fun DebugCard(
                     .clickable {
                         val sshText = "ssh -p ${sshAccess.port} ${sshAccess.ip}\nPassword: ${sshAccess.password}"
                         clipboardManager.setText(AnnotatedString(sshText))
+                        android.widget.Toast.makeText(context, "已复制", android.widget.Toast.LENGTH_SHORT).show()
                     }
                     .padding(16.dp)
             ) {
@@ -480,18 +496,6 @@ private fun DebugCard(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Open Dashboard Button
-            ActionButton(
-                text = "Open Dashboard",
-                icon = Icons.Default.Dashboard,
-                onClick = onOpenDashboard,
-                containerColor = lightBrandNormal,
-                contentColor = Color.White,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             // Bottom buttons row
             Row(

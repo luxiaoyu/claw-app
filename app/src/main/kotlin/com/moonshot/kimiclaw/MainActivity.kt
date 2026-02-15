@@ -161,6 +161,15 @@ class MainActivity : ComponentActivity() {
                 launch {
                     mainViewModel.serviceNotBoundError.collect { message ->
                         Logger.logError("MainActivity", message)
+                        android.widget.Toast.makeText(this@MainActivity, "OpenClaw Gateway 启动失败: $message", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+                launch {
+                    mainViewModel.gatewayStartResult.collect { (success, errorMsg) ->
+                        if (!success) {
+                            val toastMsg = errorMsg ?: "未知错误"
+                            android.widget.Toast.makeText(this@MainActivity, "OpenClaw Gateway 启动失败: $toastMsg", android.widget.Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
 
@@ -246,6 +255,7 @@ class MainActivity : ComponentActivity() {
         val sshAccess by mainViewModel.sshAccess.collectAsStateWithLifecycle()
         val isDebugCardVisible by mainViewModel.isDebugCardVisible.collectAsStateWithLifecycle()
         val channelsStatus by mainViewModel.channelsStatus.collectAsStateWithLifecycle()
+        val isDashboardReady by mainViewModel.isDashboardReady.collectAsStateWithLifecycle()
 
         // 进入 Dashboard 时加载 SSH 信息和开始定时检查，离开时停止
         LaunchedEffect(Unit) {
@@ -261,6 +271,7 @@ class MainActivity : ComponentActivity() {
             isStartingGateway = isStartingGateway,
             isStoppingGateway = isStoppingGateway,
             isDebugCardVisible = isDebugCardVisible,
+            isDashboardReady = isDashboardReady,
             onCheckUpgrade = { mainViewModel.checkUpgrade() },
             onStartGateway = { mainViewModel.startGateway() },
             onStopGateway = { mainViewModel.stopGateway() },

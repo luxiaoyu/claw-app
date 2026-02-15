@@ -7,7 +7,7 @@ This is an Android terminal emulator and Linux environment application based on 
 - **Package Name**: `com.termux`
 - **Current Version**: 0.118.0 (versionCode 118)
 - **License**: GPLv3 only (with exceptions for libraries)
-- **Primary Languages**: Java and Kotlin (with Chinese comments in KimiClaw layer)
+- **Primary Languages**: Java and Kotlin
 - **Build System**: Gradle with Android Gradle Plugin 8.9.1
 
 ## Technology Stack
@@ -37,6 +37,8 @@ This is an Android terminal emulator and Linux environment application based on 
 - **Commons IO**: 2.5 (capped for Android < 8 compatibility)
 - **Hidden API Bypass**: 6.1 (for internal Android APIs)
 - **termux-am-library**: v2.0.0
+- **ExoPlayer**: 1.6.1 (media3)
+- **WebSocket**: Java-WebSocket 1.5.6
 
 ## Project Structure
 
@@ -91,13 +93,11 @@ termux-shared -> terminal-view -> terminal-emulator
 #### KimiClaw UI Layer (`app/src/main/kotlin/com/moonshot/kimiclaw/`)
 - `MainActivity.kt` - Entry point with Jetpack Compose UI (Welcome, Dashboard, Install screens)
 - `KimiClawService.kt` - Foreground service for managing shell commands with coroutines
-- `TermuxSetup.kt` - Bootstrap installation helper
-- `ui/` - Compose screens (WelcomeScreen, DashboardScreen, InstallScreen, LogcatScreen, PhantomProcessDialog)
+- `PhantomProcessHelper.kt` - Helper for managing phantom process issues on Android 12+
+- `ui/` - Compose screens (WelcomeScreen, DashboardScreen, InstallScreen, LogcatScreen, PhantomProcessDialog, VideoSplashScreen, WebViewScreen)
 - `viewmodel/` - ViewModels for UI state management
 - `termux/ShellUtils.kt` - Shell execution utilities with Flow support
-- `openclaw/OpenClawHelper.kt` - OpenClaw gateway management
-- `openclaw/OpenClawInstaller.kt` - OpenClaw installation logic
-- `openclaw/OpenClawConfig.kt` - OpenClaw configuration
+- `openclaw/` - OpenClaw gateway management (OpenClawHelper, OpenClawInstaller, OpenClawConfig, KimiClawWebView)
 
 #### Shared Library (`termux-shared/src/main/java/com/termux/shared/`)
 - `termux/TermuxConstants.java` - Central constants definition
@@ -107,6 +107,7 @@ termux-shared -> terminal-view -> terminal-emulator
 - `file/` - File system utilities
 - `shell/command/` - Command execution framework
 - `net/socket/local/` - Local socket communication
+- `android/` - Android utilities (PhantomProcessUtils, SELinuxUtils, etc.)
 
 #### Terminal Emulator (`terminal-emulator/src/main/java/com/termux/terminal/`)
 - `TerminalEmulator.java` - Core VT100/ANSI terminal emulation
@@ -114,6 +115,7 @@ termux-shared -> terminal-view -> terminal-emulator
 - `TerminalBuffer.java` - Screen buffer implementation
 - `KeyHandler.java` - Key event processing
 - `JNI.java` - JNI bridge to native code
+- `WcWidth.java` - Unicode width calculation
 
 #### Terminal View (`terminal-view/src/main/java/com/termux/view/`)
 - `TerminalView.java` - Custom Android View for terminal display
@@ -173,6 +175,7 @@ Debug builds produce multiple APKs:
 The project uses NDK build system with `Android.mk` files:
 - `app/src/main/cpp/Android.mk` - Bootstrap loader
 - `terminal-emulator/src/main/jni/Android.mk` - Terminal emulator JNI
+- `termux-shared/src/main/cpp/Android.mk` - Shared library native code
 
 ### Signing
 
@@ -209,6 +212,7 @@ app/src/test/java/                  # Unit tests for app module
 - `TerminalEmulatorTest.java` - Core emulation tests
 - `KeyHandlerTest.java` - Key handling tests
 - `ByteQueueTest.java` - Data structure tests
+- `ApcTest.java`, `DecSetTest.java`, `CursorAndScreenTest.java` - Terminal feature tests
 
 ## CI/CD
 

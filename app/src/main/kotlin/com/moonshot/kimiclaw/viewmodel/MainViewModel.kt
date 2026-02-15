@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlinx.coroutines.launch
 import com.moonshot.kimiclaw.KimiClawService
 import com.moonshot.kimiclaw.openclaw.OpenClawConfig
@@ -29,9 +31,7 @@ import android.widget.Toast
  */
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    companion object {
-        private const val LOG_TAG = "MainViewModel"
-    }
+
 
     /**
      * 主屏幕状态
@@ -92,6 +92,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isGatewayRunning = MutableStateFlow(false)
     val isGatewayRunning: StateFlow<Boolean> = _isGatewayRunning
 
+    // Dashboard 是否就绪（HTTP 服务可访问）
+    private val _isDashboardReady = MutableStateFlow(false)
+    val isDashboardReady: StateFlow<Boolean> = _isDashboardReady
+
+    // Dashboard 就绪检测任务
+    private var dashboardReadyCheckJob: Job? = null
+
     // Gateway 运行时间
     private val _gatewayUptime = MutableStateFlow("—")
     val gatewayUptime: StateFlow<String> = _gatewayUptime
@@ -117,6 +124,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // 定时检查 Gateway 状态的任务
     private var gatewayStatusCheckJob: Job? = null
+
+    // Dashboard 端口号
+    companion object {
+        private const val LOG_TAG = "MainViewModel"
+        private const val DASHBOARD_PORT = 18789
+        private const val DASHBOARD_HEALTH_URL = "http://127.0.0.1:18789/health"
+    }
 
     // Gateway 启动/停止任务（用于取消）
     private var gatewayStartJob: Job? = null
@@ -256,6 +270,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _gatewayStartResult.emit(Pair(success, errorMsg))
                 }
                 gatewayStartJob = null
+
+                // 如果启动成功，开始检测 Dashboard 是否就绪
+                if (success) {
+                    startDashboardReadyCheck()
+                }
             }
         )
     }
@@ -293,6 +312,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _gatewayStopResult.emit(Pair(success, errorMsg))
                 }
                 gatewayStopJob = null
+
+                // 如果停止成功，重置 Dashboard 就绪状态
+                if (success) {
+                    stopDashboardReadyCheck()
+                    _isDashboardReady.value = false
+                }
             }
         )
     }
@@ -307,6 +332,73 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         gatewayStopJob = null
         _isStartingGateway.value = false
         _isStoppingGateway.value = false
+    }
+
+    // ==================== Dashboard 就绪检测 ====================
+
+    /**
+     * 开始检测 Dashboard 是否就绪（HTTP 服务可访问）
+     * 每2秒检测一次，直到成功或超时（2分钟）
+     */
+    private fun startDashboardReadyCheck() {
+        // 取消之前的检测任务
+        dashboardReadyCheckJob?.cancel()
+        _isDashboardReady.value = false
+
+        Logger.logInfo(LOG_TAG, "Starting Dashboard ready check")
+
+        dashboardReadyCheckJob = viewModelScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            val timeoutMs = 120_000L // 2分钟超时
+
+            while (isActive && (System.currentTimeMillis() - startTime) < timeoutMs) {
+                if (checkDashboardHealth()) {
+                    _isDashboardReady.value = true
+                    Logger.logInfo(LOG_TAG, "Dashboard is ready!")
+                    return@launch
+                }
+                delay(2_000L) // 每2秒检测一次
+            }
+
+            // 超时后仍未就绪
+            if (isActive) {
+                Logger.logWarn(LOG_TAG, "Dashboard ready check timeout after ${timeoutMs}ms")
+            }
+        }
+    }
+
+    /**
+     * 停止 Dashboard 就绪检测
+     */
+    private fun stopDashboardReadyCheck() {
+        dashboardReadyCheckJob?.cancel()
+        dashboardReadyCheckJob = null
+    }
+
+    /**
+     * 检测 Dashboard HTTP 服务是否可访问
+     * @return true 如果服务就绪
+     */
+    private fun checkDashboardHealth(): Boolean {
+        return try {
+            val url = URL(DASHBOARD_HEALTH_URL)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.apply {
+                connectTimeout = 3000
+                readTimeout = 3000
+                requestMethod = "GET"
+                useCaches = false
+            }
+
+            val responseCode = connection.responseCode
+            connection.disconnect()
+
+            Logger.logDebug(LOG_TAG, "Dashboard health check: HTTP $responseCode")
+            responseCode == 200
+        } catch (e: Exception) {
+            Logger.logDebug(LOG_TAG, "Dashboard health check failed: ${e.message}")
+            false
+        }
     }
 
     // ==================== 检查升级（占位）====================
