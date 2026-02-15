@@ -158,13 +158,6 @@ fun WelcomeScreen(
                     color = lightBrandNormal
                 )
             ) {
-                Text(
-                    text = "打开 Dashboard",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = lightBrandNormal,
-                    letterSpacing = 0.5.sp
-                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
